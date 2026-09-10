@@ -14,20 +14,25 @@ authRouter.post('/login', async (req, res) => {
     return res.status(400).json({ error: 'Faltan "email" y/o "password" en el body.' });
   }
 
-  const usuario = await buscarUsuarioPorEmail(email);
-  const passwordOk = usuario ? await verifyPassword(password, usuario.password_hash) : false;
-  if (!passwordOk) {
-    return res.status(401).json({ error: 'Credenciales inválidas.' });
-  }
+  try {
+    const usuario = await buscarUsuarioPorEmail(email);
+    const passwordOk = usuario ? await verifyPassword(password, usuario.password_hash) : false;
+    if (!passwordOk) {
+      return res.status(401).json({ error: 'Credenciales inválidas.' });
+    }
 
-  const token = signUserToken(usuario);
-  res.cookie(COOKIE_NAME, token, {
-    httpOnly: true,
-    sameSite: 'lax',
-    secure: process.env.NODE_ENV === 'production',
-    maxAge: COOKIE_MAX_AGE_MS,
-  });
-  res.json({ usuario: { id: usuario.id, email: usuario.email, nombre: usuario.nombre, rol: usuario.rol } });
+    const token = signUserToken(usuario);
+    res.cookie(COOKIE_NAME, token, {
+      httpOnly: true,
+      sameSite: 'lax',
+      secure: process.env.NODE_ENV === 'production',
+      maxAge: COOKIE_MAX_AGE_MS,
+    });
+    res.json({ usuario: { id: usuario.id, email: usuario.email, nombre: usuario.nombre, rol: usuario.rol } });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'No se pudo procesar el login.', detail: err.message });
+  }
 });
 
 authRouter.post('/logout', (req, res) => {
