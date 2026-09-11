@@ -11,6 +11,36 @@ export async function buscarUsuarioPorEmail(email) {
   return usuario ?? null;
 }
 
+/** Lista de usuarios (sin el hash de password), para el panel de administración. */
+export async function listarUsuarios() {
+  const [rows] = await pool.query(
+    `SELECT id, email, nombre, rol, created_at FROM usuarios ORDER BY created_at ASC`
+  );
+  return rows;
+}
+
+/** Crea un usuario y devuelve el registro (sin el hash). Lanza code 'EMAIL_DUPLICADO' si ya existe. */
+export async function crearUsuario({ email, password_hash, nombre, rol }) {
+  try {
+    const [result] = await pool.query(
+      `INSERT INTO usuarios (email, password_hash, nombre, rol) VALUES (?, ?, ?, ?)`,
+      [email, password_hash, nombre, rol]
+    );
+    const [[usuario]] = await pool.query(
+      `SELECT id, email, nombre, rol, created_at FROM usuarios WHERE id = ?`,
+      [result.insertId]
+    );
+    return usuario;
+  } catch (err) {
+    if (err.code === 'ER_DUP_ENTRY') {
+      const e = new Error(`Ya existe un usuario con el email "${email}".`);
+      e.code = 'EMAIL_DUPLICADO';
+      throw e;
+    }
+    throw err;
+  }
+}
+
 /** OP -> Cliente -> Proyecto -> líneas (Producto, Código, Formato, Cantidad, Proveedor, Fecha, Estado) */
 export async function buscarPorOP(numeroOp) {
   const [rows] = await pool.query(

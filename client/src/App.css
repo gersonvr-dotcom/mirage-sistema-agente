@@ -150,6 +150,16 @@ td {
   color: var(--text);
 }
 
+.badge-administrador {
+  background: var(--accent-bg);
+  color: var(--accent);
+}
+
+.badge-operador {
+  background: var(--code-bg);
+  color: var(--text);
+}
+
 .form {
   display: flex;
   flex-direction: column;

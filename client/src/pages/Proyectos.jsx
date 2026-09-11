@@ -11,6 +11,7 @@ export function Proyectos() {
   const [error, setError] = useState(null);
   const [confirmandoId, setConfirmandoId] = useState(null);
   const { usuario, logout } = useAuth();
+  const esAdmin = usuario?.rol === 'administrador';
 
   const cargar = useCallback(async (filtros) => {
     setLoading(true);
@@ -51,6 +52,7 @@ export function Proyectos() {
       <header className="topbar">
         <h1>Proyectos</h1>
         <div>
+          {esAdmin && <Link to="/usuarios">Usuarios</Link>}
           <span>{usuario?.nombre}</span>
           <button onClick={logout}>Salir</button>
         </div>
@@ -100,19 +102,20 @@ export function Proyectos() {
                 <td>{new Date(p.created_at).toLocaleDateString()}</td>
                 <td>
                   <Link to={`/proyectos/${p.id}`}>Editar</Link>{' '}
-                  {confirmandoId === p.id ? (
-                    <>
-                      <span>¿Seguro?</span>{' '}
-                      <button onClick={() => handleDelete(p.id)}>Sí, eliminar</button>{' '}
-                      <button type="button" onClick={() => setConfirmandoId(null)}>
-                        No
+                  {esAdmin &&
+                    (confirmandoId === p.id ? (
+                      <>
+                        <span>¿Seguro?</span>{' '}
+                        <button onClick={() => handleDelete(p.id)}>Sí, eliminar</button>{' '}
+                        <button type="button" onClick={() => setConfirmandoId(null)}>
+                          No
+                        </button>
+                      </>
+                    ) : (
+                      <button type="button" onClick={() => setConfirmandoId(p.id)}>
+                        Eliminar
                       </button>
-                    </>
-                  ) : (
-                    <button type="button" onClick={() => setConfirmandoId(p.id)}>
-                      Eliminar
-                    </button>
-                  )}
+                    ))}
                 </td>
               </tr>
             ))}

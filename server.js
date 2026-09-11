@@ -8,7 +8,9 @@ import { agentRouter } from './src/routes/agent.js';
 import { authRouter } from './src/routes/auth.js';
 import { proyectosRouter } from './src/routes/proyectos.js';
 import { clientesRouter } from './src/routes/clientes.js';
+import { usuariosRouter } from './src/routes/usuarios.js';
 import { requireAuth } from './src/middleware/requireAuth.js';
+import { requireRole } from './src/middleware/requireRole.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const clientDist = path.join(__dirname, 'client', 'dist');
@@ -25,6 +27,7 @@ app.use('/api/auth', authRouter);
 app.use('/api/agent', requireAuth, agentRouter);
 app.use('/api/proyectos', requireAuth, proyectosRouter);
 app.use('/api/clientes', requireAuth, clientesRouter);
+app.use('/api/usuarios', requireAuth, requireRole('administrador'), usuariosRouter);
 
 if (fs.existsSync(path.join(clientDist, 'index.html'))) {
   app.use(express.static(clientDist));

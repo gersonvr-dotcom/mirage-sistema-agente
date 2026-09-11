@@ -6,6 +6,7 @@ import {
   actualizarProyecto,
   eliminarProyecto,
 } from '../db/queries.js';
+import { requireRole } from '../middleware/requireRole.js';
 
 export const proyectosRouter = Router();
 
@@ -60,7 +61,7 @@ proyectosRouter.put('/:id', async (req, res) => {
   }
 });
 
-proyectosRouter.delete('/:id', async (req, res) => {
+proyectosRouter.delete('/:id', requireRole('administrador'), async (req, res) => {
   try {
     const eliminado = await eliminarProyecto(req.params.id);
     if (!eliminado) return res.status(404).json({ error: 'Proyecto no encontrado.' });

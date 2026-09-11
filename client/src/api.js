@@ -31,6 +31,9 @@ export const api = {
 
   clientes: () => request('/clientes'),
 
+  usuarios: () => request('/usuarios'),
+  crearUsuario: (data) => request('/usuarios', { method: 'POST', body: JSON.stringify(data) }),
+
   proyectos: (params = {}) => {
     const qs = new URLSearchParams(
       Object.fromEntries(Object.entries(params).filter(([, v]) => v))
