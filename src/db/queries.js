@@ -210,6 +210,38 @@ export async function eliminarProyecto(id) {
   }
 }
 
+/** Métricas agregadas para el dashboard: totales y distribución por estado. */
+export async function obtenerMetricas() {
+  const [
+    [[{ total_proyectos }]],
+    [[{ total_ops }]],
+    [[{ total_clientes }]],
+    [[{ items_atrasados }]],
+    [proyectosPorEstado],
+    [opsPorEstado],
+    [itemsPorEstado],
+  ] = await Promise.all([
+    pool.query(`SELECT COUNT(*) AS total_proyectos FROM proyectos`),
+    pool.query(`SELECT COUNT(*) AS total_ops FROM ops`),
+    pool.query(`SELECT COUNT(*) AS total_clientes FROM clientes`),
+    pool.query(
+      `SELECT COUNT(*) AS items_atrasados FROM op_items
+        WHERE fecha_estimada_entrega < CURDATE()
+          AND estado NOT IN ('en_bodega', 'entregado', 'cancelado')`
+    ),
+    pool.query(`SELECT estado, COUNT(*) AS cantidad FROM proyectos GROUP BY estado`),
+    pool.query(`SELECT estado_general, COUNT(*) AS cantidad FROM ops GROUP BY estado_general`),
+    pool.query(`SELECT estado, COUNT(*) AS cantidad FROM op_items GROUP BY estado`),
+  ]);
+
+  return {
+    totales: { proyectos: total_proyectos, ops: total_ops, clientes: total_clientes, items_atrasados },
+    proyectos_por_estado: proyectosPorEstado,
+    ops_por_estado: opsPorEstado,
+    items_por_estado: itemsPorEstado,
+  };
+}
+
 /** Reconstruye el estado completo de un proyecto: cotizaciones, pedidos, OPs, items y atrasos. */
 export async function estadoProyecto(nombreProyecto) {
   const [[proyecto]] = await pool.query(

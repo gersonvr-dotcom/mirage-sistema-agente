@@ -6,6 +6,7 @@ import { Login } from './pages/Login';
 import { Proyectos } from './pages/Proyectos';
 import { ProyectoForm } from './pages/ProyectoForm';
 import { Usuarios } from './pages/Usuarios';
+import { Dashboard } from './pages/Dashboard';
 import './App.css';
 
 export default function App() {
@@ -35,6 +36,14 @@ export default function App() {
             element={
               <ProtectedRoute>
                 <ProyectoForm />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/dashboard"
+            element={
+              <ProtectedRoute>
+                <Dashboard />
               </ProtectedRoute>
             }
           />

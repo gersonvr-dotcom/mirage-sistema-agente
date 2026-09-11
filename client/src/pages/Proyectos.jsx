@@ -52,6 +52,7 @@ export function Proyectos() {
       <header className="topbar">
         <h1>Proyectos</h1>
         <div>
+          <Link to="/dashboard">Dashboard</Link>
           {esAdmin && <Link to="/usuarios">Usuarios</Link>}
           <span>{usuario?.nombre}</span>
           <button onClick={logout}>Salir</button>

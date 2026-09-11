@@ -9,6 +9,7 @@ import { authRouter } from './src/routes/auth.js';
 import { proyectosRouter } from './src/routes/proyectos.js';
 import { clientesRouter } from './src/routes/clientes.js';
 import { usuariosRouter } from './src/routes/usuarios.js';
+import { dashboardRouter } from './src/routes/dashboard.js';
 import { requireAuth } from './src/middleware/requireAuth.js';
 import { requireRole } from './src/middleware/requireRole.js';
 
@@ -28,6 +29,7 @@ app.use('/api/agent', requireAuth, agentRouter);
 app.use('/api/proyectos', requireAuth, proyectosRouter);
 app.use('/api/clientes', requireAuth, clientesRouter);
 app.use('/api/usuarios', requireAuth, requireRole('administrador'), usuariosRouter);
+app.use('/api/dashboard', requireAuth, dashboardRouter);
 
 if (fs.existsSync(path.join(clientDist, 'index.html'))) {
   app.use(express.static(clientDist));
