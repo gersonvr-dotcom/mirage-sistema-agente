@@ -95,9 +95,12 @@ export async function materialPendiente({ cliente, proyecto } = {}) {
   return rows;
 }
 
-/** Lista de clientes (para selects/formularios). */
-export async function listarClientes() {
-  const [rows] = await pool.query(`SELECT id, nombre FROM clientes ORDER BY nombre ASC`);
+/** Lista de clientes (para selects/formularios), opcionalmente filtrada por nombre parcial. */
+export async function listarClientes({ q } = {}) {
+  const [rows] = await pool.query(
+    `SELECT id, nombre FROM clientes ${q ? 'WHERE nombre LIKE ?' : ''} ORDER BY nombre ASC`,
+    q ? [`%${q}%`] : []
+  );
   return rows;
 }
 
