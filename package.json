@@ -6,7 +6,8 @@
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
-    "dev": "node --watch server.js"
+    "dev": "node --watch server.js",
+    "postinstall": "npm --prefix client install && npm --prefix client run build"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.124.0",

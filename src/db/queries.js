@@ -95,6 +95,88 @@ export async function materialPendiente({ cliente, proyecto } = {}) {
   return rows;
 }
 
+/** Lista de clientes (para selects/formularios). */
+export async function listarClientes() {
+  const [rows] = await pool.query(`SELECT id, nombre FROM clientes ORDER BY nombre ASC`);
+  return rows;
+}
+
+/** Lista de proyectos con el nombre del cliente, filtrable por texto y/o estado. */
+export async function listarProyectos({ q, estado } = {}) {
+  const where = [];
+  const params = [];
+
+  if (q) {
+    where.push('(p.nombre LIKE ? OR c.nombre LIKE ?)');
+    params.push(`%${q}%`, `%${q}%`);
+  }
+  if (estado) {
+    where.push('p.estado = ?');
+    params.push(estado);
+  }
+
+  const [rows] = await pool.query(
+    `SELECT p.id, p.nombre, p.descripcion, p.estado, p.created_at,
+            p.cliente_id, c.nombre AS cliente
+       FROM proyectos p
+       JOIN clientes c ON c.id = p.cliente_id
+      ${where.length ? `WHERE ${where.join(' AND ')}` : ''}
+      ORDER BY p.created_at DESC`,
+    params
+  );
+  return rows;
+}
+
+/** Un proyecto por id, con el nombre del cliente. */
+export async function obtenerProyecto(id) {
+  const [[proyecto]] = await pool.query(
+    `SELECT p.id, p.nombre, p.descripcion, p.estado, p.created_at,
+            p.cliente_id, c.nombre AS cliente
+       FROM proyectos p
+       JOIN clientes c ON c.id = p.cliente_id
+      WHERE p.id = ?`,
+    [id]
+  );
+  return proyecto ?? null;
+}
+
+/** Crea un proyecto y devuelve el registro creado. */
+export async function crearProyecto({ cliente_id, nombre, descripcion, estado }) {
+  const [result] = await pool.query(
+    `INSERT INTO proyectos (cliente_id, nombre, descripcion, estado) VALUES (?, ?, ?, ?)`,
+    [cliente_id, nombre, descripcion ?? null, estado || 'activo']
+  );
+  return obtenerProyecto(result.insertId);
+}
+
+/** Actualiza un proyecto existente y devuelve el registro actualizado (o null si no existe). */
+export async function actualizarProyecto(id, { cliente_id, nombre, descripcion, estado }) {
+  const [result] = await pool.query(
+    `UPDATE proyectos SET cliente_id = ?, nombre = ?, descripcion = ?, estado = ? WHERE id = ?`,
+    [cliente_id, nombre, descripcion ?? null, estado, id]
+  );
+  if (result.affectedRows === 0) return null;
+  return obtenerProyecto(id);
+}
+
+/**
+ * Elimina un proyecto. Lanza un error con code 'TIENE_DEPENDENCIAS' si hay cotizaciones,
+ * pedidos u OPs asociadas (la baja en ese caso es cambiar el estado a "cerrado").
+ */
+export async function eliminarProyecto(id) {
+  try {
+    const [result] = await pool.query(`DELETE FROM proyectos WHERE id = ?`, [id]);
+    return result.affectedRows > 0;
+  } catch (err) {
+    if (err.code === 'ER_ROW_IS_REFERENCED_2' || err.code === 'ER_ROW_IS_REFERENCED') {
+      const e = new Error('El proyecto tiene cotizaciones, pedidos u OPs asociadas y no se puede eliminar.');
+      e.code = 'TIENE_DEPENDENCIAS';
+      throw e;
+    }
+    throw err;
+  }
+}
+
 /** Reconstruye el estado completo de un proyecto: cotizaciones, pedidos, OPs, items y atrasos. */
 export async function estadoProyecto(nombreProyecto) {
   const [[proyecto]] = await pool.query(
