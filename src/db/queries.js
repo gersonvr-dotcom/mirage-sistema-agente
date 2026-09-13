@@ -210,6 +210,58 @@ export async function eliminarProyecto(id) {
   }
 }
 
+/** La conversación activa del agente para un usuario (una por usuario), o null si nunca chateó. */
+export async function obtenerConversacion(usuarioId) {
+  const [[conversacion]] = await pool.query(
+    `SELECT id, provider, historial, tokens_input, tokens_output, updated_at
+       FROM conversaciones_agente WHERE usuario_id = ?`,
+    [usuarioId]
+  );
+  if (!conversacion) return null;
+  return {
+    ...conversacion,
+    historial: conversacion.historial ? JSON.parse(conversacion.historial) : [],
+  };
+}
+
+/** Crea o actualiza la conversación del agente de un usuario (upsert por usuario_id). */
+export async function guardarConversacion({ usuarioId, provider, historial, tokensInput, tokensOutput }) {
+  const [result] = await pool.query(
+    `INSERT INTO conversaciones_agente (usuario_id, provider, historial, tokens_input, tokens_output)
+     VALUES (?, ?, ?, ?, ?)
+     ON DUPLICATE KEY UPDATE
+       id = LAST_INSERT_ID(id),
+       provider = VALUES(provider),
+       historial = VALUES(historial),
+       tokens_input = VALUES(tokens_input),
+       tokens_output = VALUES(tokens_output)`,
+    [usuarioId, provider, JSON.stringify(historial), tokensInput, tokensOutput]
+  );
+  return result.insertId;
+}
+
+/** Registra una acción de escritura ejecutada por el agente (auditoría). */
+export async function registrarAccionAgente({ usuarioId, conversacionId, toolName, input, resultado }) {
+  await pool.query(
+    `INSERT INTO agente_acciones (usuario_id, conversacion_id, tool_name, input, resultado)
+     VALUES (?, ?, ?, ?, ?)`,
+    [usuarioId, conversacionId ?? null, toolName, JSON.stringify(input ?? null), JSON.stringify(resultado ?? null)]
+  );
+}
+
+/** Últimas acciones del agente, para el panel de auditoría. */
+export async function listarAccionesAgente({ limit = 50 } = {}) {
+  const [rows] = await pool.query(
+    `SELECT a.id, a.tool_name, a.input, a.resultado, a.created_at, u.nombre AS usuario
+       FROM agente_acciones a
+       JOIN usuarios u ON u.id = a.usuario_id
+      ORDER BY a.created_at DESC
+      LIMIT ?`,
+    [Number(limit)]
+  );
+  return rows;
+}
+
 /** Métricas agregadas para el dashboard: totales y distribución por estado. */
 export async function obtenerMetricas() {
   const [

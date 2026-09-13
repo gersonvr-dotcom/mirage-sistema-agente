@@ -7,6 +7,7 @@ import { Proyectos } from './pages/Proyectos';
 import { ProyectoForm } from './pages/ProyectoForm';
 import { Usuarios } from './pages/Usuarios';
 import { Dashboard } from './pages/Dashboard';
+import { Chat } from './pages/Chat';
 import './App.css';
 
 export default function App() {
@@ -44,6 +45,14 @@ export default function App() {
             element={
               <ProtectedRoute>
                 <Dashboard />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/chat"
+            element={
+              <ProtectedRoute>
+                <Chat />
               </ProtectedRoute>
             }
           />

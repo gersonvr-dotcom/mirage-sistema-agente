@@ -118,8 +118,36 @@ CREATE TABLE seguimiento_etapas (
   FOREIGN KEY (op_item_id) REFERENCES op_items(id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
+-- Memoria de conversación del agente: una conversación activa por usuario, con el historial
+-- crudo del proveedor (Gemini o Claude) y el consumo acumulado de tokens.
+CREATE TABLE conversaciones_agente (
+  id            INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  usuario_id    INT UNSIGNED NOT NULL UNIQUE,
+  provider      VARCHAR(20) NOT NULL,
+  historial     LONGTEXT,
+  tokens_input  INT UNSIGNED NOT NULL DEFAULT 0,
+  tokens_output INT UNSIGNED NOT NULL DEFAULT 0,
+  created_at    TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at    TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  FOREIGN KEY (usuario_id) REFERENCES usuarios(id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- Auditoría: qué acción de escritura ejecutó el agente, quién la pidió y con qué datos.
+CREATE TABLE agente_acciones (
+  id                INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  usuario_id        INT UNSIGNED NOT NULL,
+  conversacion_id   INT UNSIGNED,
+  tool_name         VARCHAR(60) NOT NULL,
+  input             JSON,
+  resultado         JSON,
+  created_at        TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (usuario_id) REFERENCES usuarios(id),
+  FOREIGN KEY (conversacion_id) REFERENCES conversaciones_agente(id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
 CREATE INDEX idx_op_items_op ON op_items(op_id);
 CREATE INDEX idx_op_items_producto ON op_items(producto_id);
 CREATE INDEX idx_ops_cliente ON ops(cliente_id);
 CREATE INDEX idx_ops_proyecto ON ops(proyecto_id);
 CREATE INDEX idx_seguimiento_item ON seguimiento_etapas(op_item_id);
+CREATE INDEX idx_agente_acciones_fecha ON agente_acciones(created_at);

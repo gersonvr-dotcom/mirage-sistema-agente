@@ -52,8 +52,17 @@ function BarList({ titulo, filas, claseFill }) {
   );
 }
 
+const ACCION_LABELS = { crear_proyecto: 'Creó', editar_proyecto: 'Editó', eliminar_proyecto: 'Eliminó' };
+
+function resumenAccion(accion) {
+  const verbo = ACCION_LABELS[accion.tool_name] ?? accion.tool_name;
+  const nombre = accion.resultado?.proyecto?.nombre ?? accion.input?.proyecto ?? accion.input?.nombre ?? '';
+  return `${verbo} el proyecto "${nombre}"`;
+}
+
 export function Dashboard() {
   const [metricas, setMetricas] = useState(null);
+  const [auditoria, setAuditoria] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const { usuario, logout } = useAuth();
@@ -64,6 +73,10 @@ export function Dashboard() {
       .then(setMetricas)
       .catch((err) => setError(err.message))
       .finally(() => setLoading(false));
+    api
+      .auditoriaAgente()
+      .then((data) => setAuditoria(data.acciones))
+      .catch(() => {}); // no bloquea el resto del dashboard si falla
   }, []);
 
   return (
@@ -71,6 +84,7 @@ export function Dashboard() {
       <header className="topbar">
         <h1>Dashboard</h1>
         <div>
+          <Link to="/chat">Chat</Link>
           <Link to="/proyectos">Proyectos</Link>
           {usuario?.rol === 'administrador' && <Link to="/usuarios">Usuarios</Link>}
           <span>{usuario?.nombre}</span>
@@ -122,6 +136,32 @@ export function Dashboard() {
               claseFill={(clave) => (TERMINALES.has(clave) ? 'estado-terminal' : 'estado-pipeline')}
             />
           </div>
+
+          <section className="bar-list" style={{ marginTop: 28 }}>
+            <h2>Últimas acciones del agente</h2>
+            {auditoria.length === 0 ? (
+              <p className="chat-empty">El agente todavía no ha creado, editado ni eliminado ningún proyecto.</p>
+            ) : (
+              <table>
+                <thead>
+                  <tr>
+                    <th>Fecha</th>
+                    <th>Usuario</th>
+                    <th>Acción</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {auditoria.map((a) => (
+                    <tr key={a.id}>
+                      <td>{new Date(a.created_at).toLocaleString('es')}</td>
+                      <td>{a.usuario}</td>
+                      <td>{resumenAccion(a)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
+          </section>
         </>
       )}
     </div>

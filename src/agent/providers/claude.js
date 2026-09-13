@@ -29,7 +29,15 @@ export async function runClaudeChat(userMessage, history = []) {
       messages,
     });
 
+  let inputTokens = 0;
+  let outputTokens = 0;
+  const acumularUso = (response) => {
+    inputTokens += response.usage?.input_tokens ?? 0;
+    outputTokens += response.usage?.output_tokens ?? 0;
+  };
+
   let response = await request();
+  acumularUso(response);
 
   for (let round = 0; round < MAX_TOOL_ROUNDS && response.stop_reason === 'tool_use'; round++) {
     messages.push({ role: 'assistant', content: response.content });
@@ -53,10 +61,11 @@ export async function runClaudeChat(userMessage, history = []) {
     messages.push({ role: 'user', content: toolResults });
 
     response = await request();
+    acumularUso(response);
   }
 
   messages.push({ role: 'assistant', content: response.content });
   const reply = response.content.find((block) => block.type === 'text')?.text ?? '';
 
-  return { reply, toolCalls, history: messages };
+  return { reply, toolCalls, history: messages, usage: { inputTokens, outputTokens } };
 }

@@ -278,3 +278,87 @@ td {
 .bar-fill.estado-terminal {
   background: var(--text);
 }
+
+.chat-page {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+}
+
+.chat-meta {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 12px;
+}
+
+.chat-usage {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex: 1;
+}
+
+.chat-usage-track {
+  flex: 1;
+  max-width: 240px;
+}
+
+.chat-usage-label {
+  font-size: 12px;
+  color: var(--text);
+  white-space: nowrap;
+}
+
+.chat-messages {
+  flex: 1;
+  min-height: 240px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 8px 0;
+}
+
+.chat-empty {
+  color: var(--text);
+  font-size: 14px;
+}
+
+.chat-bubble {
+  max-width: 70%;
+  padding: 10px 14px;
+  border-radius: 10px;
+  font-size: 14px;
+  line-height: 145%;
+  white-space: pre-wrap;
+}
+
+.chat-bubble-user {
+  align-self: flex-end;
+  background: var(--accent-bg);
+  border: 1px solid var(--accent-border);
+  color: var(--text-h);
+}
+
+.chat-bubble-model {
+  align-self: flex-start;
+  background: var(--code-bg);
+  color: var(--text-h);
+}
+
+.chat-bubble-loading {
+  color: var(--text);
+  font-style: italic;
+}
+
+.chat-input-row {
+  display: flex;
+  gap: 8px;
+  padding-top: 12px;
+}
+
+.chat-input-row input {
+  flex: 1;
+}

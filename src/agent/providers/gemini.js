@@ -21,7 +21,18 @@ export async function runGeminiChat(userMessage, history = []) {
   });
 
   const toolCalls = [];
+  let inputTokens = 0;
+  let outputTokens = 0;
+  const acumularUso = (response) => {
+    inputTokens += response.usageMetadata?.promptTokenCount ?? 0;
+    // candidatesTokenCount es solo el texto/tool-call visible; thoughtsTokenCount son los
+    // tokens de razonamiento interno del modelo, que también se facturan como output.
+    outputTokens +=
+      (response.usageMetadata?.candidatesTokenCount ?? 0) + (response.usageMetadata?.thoughtsTokenCount ?? 0);
+  };
+
   let response = await chat.sendMessage({ message: userMessage });
+  acumularUso(response);
 
   for (let round = 0; round < MAX_TOOL_ROUNDS && response.functionCalls?.length; round++) {
     const responseParts = [];
@@ -36,7 +47,13 @@ export async function runGeminiChat(userMessage, history = []) {
       responseParts.push({ functionResponse: { id: fc.id, name: fc.name, response: { result } } });
     }
     response = await chat.sendMessage({ message: responseParts });
+    acumularUso(response);
   }
 
-  return { reply: response.text, toolCalls, history: chat.getHistory() };
+  return {
+    reply: response.text,
+    toolCalls,
+    history: chat.getHistory(),
+    usage: { inputTokens, outputTokens },
+  };
 }

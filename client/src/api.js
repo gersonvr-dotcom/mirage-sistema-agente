@@ -36,6 +36,11 @@ export const api = {
 
   metricas: () => request('/dashboard'),
 
+  conversacionAgente: () => request('/agent/conversacion'),
+  auditoriaAgente: () => request('/agent/auditoria'),
+  chatAgente: (message, provider) =>
+    request('/agent/chat', { method: 'POST', body: JSON.stringify({ message, provider }) }),
+
   proyectos: (params = {}) => {
     const qs = new URLSearchParams(
       Object.fromEntries(Object.entries(params).filter(([, v]) => v))
