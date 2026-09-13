@@ -14,6 +14,9 @@ export function Chat() {
   const [limitReached, setLimitReached] = useState(false);
   const { usuario, logout } = useAuth();
   const finRef = useRef(null);
+  // Recuerda a qué proveedor pertenece el límite cargado: cambiar de proveedor arranca una
+  // conversación nueva (ver chat.js), así que el bloqueo no debe seguir aplicando en ese caso.
+  const limiteProviderRef = useRef(null);
 
   useEffect(() => {
     api
@@ -22,6 +25,11 @@ export function Chat() {
         setMensajes(data.mensajes);
         setUsage(data.usage);
         if (data.provider) setProvider(data.provider);
+        const alcanzado = data.usage.tokensInput + data.usage.tokensOutput >= data.usage.limit;
+        if (alcanzado) {
+          limiteProviderRef.current = data.provider ?? 'gemini';
+          setLimitReached(true);
+        }
       })
       .catch((err) => setError(err.message))
       .finally(() => setCargando(false));
@@ -71,7 +79,13 @@ export function Chat() {
       </header>
 
       <div className="chat-meta">
-        <select value={provider} onChange={(e) => setProvider(e.target.value)}>
+        <select
+          value={provider}
+          onChange={(e) => {
+            setProvider(e.target.value);
+            setLimitReached(e.target.value === limiteProviderRef.current);
+          }}
+        >
           <option value="gemini">Gemini</option>
           <option value="claude">Claude</option>
         </select>
@@ -103,7 +117,11 @@ export function Chat() {
       </div>
 
       {error && <p className="error">{error}</p>}
-      {limitReached && <p className="error">Esta conversación alcanzó su límite de uso. Puedes seguir hablando con el agente después de que un administrador la reinicie.</p>}
+      {limitReached && (
+        <p className="error">
+          Esta conversación alcanzó su límite de uso. Cambia de proveedor arriba (Gemini/Claude) para empezar una conversación nueva.
+        </p>
+      )}
 
       <form onSubmit={enviar} className="chat-input-row">
         <input

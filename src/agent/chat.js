@@ -41,7 +41,7 @@ export async function runAgentChat(usuarioId, userMessage, providerSolicitado) {
     return {
       reply:
         `Esta conversación alcanzó su límite de uso (${LIMITE_TOKENS.toLocaleString('es')} tokens) ` +
-        'para evitar sobrecostos. Puedes seguir usando el agente en una conversación nueva.',
+        'para evitar sobrecostos. Cambia de proveedor (Gemini/Claude) en el chat para empezar una conversación nueva.',
       toolCalls: [],
       limitReached: true,
       usage: { tokensInput: previa.tokens_input, tokensOutput: previa.tokens_output, limit: LIMITE_TOKENS },
