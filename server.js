@@ -10,6 +10,9 @@ import { proyectosRouter } from './src/routes/proyectos.js';
 import { clientesRouter } from './src/routes/clientes.js';
 import { usuariosRouter } from './src/routes/usuarios.js';
 import { dashboardRouter } from './src/routes/dashboard.js';
+import { opsRouter } from './src/routes/ops.js';
+import { productosRouter } from './src/routes/productos.js';
+import { proveedoresRouter } from './src/routes/proveedores.js';
 import { requireAuth } from './src/middleware/requireAuth.js';
 import { requireRole } from './src/middleware/requireRole.js';
 
@@ -30,6 +33,9 @@ app.use('/api/proyectos', requireAuth, proyectosRouter);
 app.use('/api/clientes', requireAuth, clientesRouter);
 app.use('/api/usuarios', requireAuth, requireRole('administrador'), usuariosRouter);
 app.use('/api/dashboard', requireAuth, dashboardRouter);
+app.use('/api/ops', requireAuth, opsRouter);
+app.use('/api/productos', requireAuth, productosRouter);
+app.use('/api/proveedores', requireAuth, proveedoresRouter);
 
 if (fs.existsSync(path.join(clientDist, 'index.html'))) {
   app.use(express.static(clientDist));

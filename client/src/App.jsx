@@ -8,6 +8,9 @@ import { ProyectoForm } from './pages/ProyectoForm';
 import { Usuarios } from './pages/Usuarios';
 import { Dashboard } from './pages/Dashboard';
 import { Chat } from './pages/Chat';
+import { OPs } from './pages/OPs';
+import { OPForm } from './pages/OPForm';
+import { OPDetail } from './pages/OPDetail';
 import './App.css';
 
 export default function App() {
@@ -37,6 +40,30 @@ export default function App() {
             element={
               <ProtectedRoute>
                 <ProyectoForm />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/ops"
+            element={
+              <ProtectedRoute>
+                <OPs />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/ops/nueva"
+            element={
+              <ProtectedRoute>
+                <OPForm />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/ops/:id"
+            element={
+              <ProtectedRoute>
+                <OPDetail />
               </ProtectedRoute>
             }
           />

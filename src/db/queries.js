@@ -349,3 +349,216 @@ export async function estadoProyecto(nombreProyecto) {
 
   return { proyecto: { nombre: proyecto.nombre, cliente: proyecto.cliente, estado: proyecto.estado }, cotizaciones, pedidos, ops };
 }
+
+/** Lista de productos (para selects de líneas de OP), opcionalmente filtrada por texto. */
+export async function listarProductos({ q } = {}) {
+  const [rows] = await pool.query(
+    `SELECT id, codigo, nombre, formato, unidad_medida FROM productos
+      ${q ? 'WHERE codigo LIKE ? OR nombre LIKE ?' : ''}
+      ORDER BY nombre ASC`,
+    q ? [`%${q}%`, `%${q}%`] : []
+  );
+  return rows;
+}
+
+/** Lista de proveedores (para selects de líneas de OP), opcionalmente filtrada por texto. */
+export async function listarProveedores({ q } = {}) {
+  const [rows] = await pool.query(
+    `SELECT id, nombre FROM proveedores ${q ? 'WHERE nombre LIKE ?' : ''} ORDER BY nombre ASC`,
+    q ? [`%${q}%`] : []
+  );
+  return rows;
+}
+
+/** Lista de OPs con cliente y proyecto, filtrable por texto/estado/cliente/proyecto. */
+export async function listarOPs({ q, estado, clienteId, proyectoId } = {}) {
+  const where = [];
+  const params = [];
+
+  if (q) {
+    where.push('(o.numero_op LIKE ? OR c.nombre LIKE ? OR p.nombre LIKE ?)');
+    params.push(`%${q}%`, `%${q}%`, `%${q}%`);
+  }
+  if (estado) {
+    where.push('o.estado_general = ?');
+    params.push(estado);
+  }
+  if (clienteId) {
+    where.push('o.cliente_id = ?');
+    params.push(clienteId);
+  }
+  if (proyectoId) {
+    where.push('o.proyecto_id = ?');
+    params.push(proyectoId);
+  }
+
+  const [rows] = await pool.query(
+    `SELECT o.id, o.numero_op, o.fecha_emision, o.estado_general, o.created_at,
+            o.cliente_id, c.nombre AS cliente,
+            o.proyecto_id, p.nombre AS proyecto,
+            o.pedido_id,
+            (SELECT COUNT(*) FROM op_items oi WHERE oi.op_id = o.id) AS num_items
+       FROM ops o
+       JOIN clientes c ON c.id = o.cliente_id
+       JOIN proyectos p ON p.id = o.proyecto_id
+      ${where.length ? `WHERE ${where.join(' AND ')}` : ''}
+      ORDER BY o.created_at DESC`,
+    params
+  );
+  return rows;
+}
+
+/** Una OP completa: cabecera + líneas (con producto/proveedor) + historial de etapas por línea. */
+export async function obtenerOP(id) {
+  const [[op]] = await pool.query(
+    `SELECT o.id, o.numero_op, o.fecha_emision, o.estado_general, o.pedido_id,
+            o.cliente_id, c.nombre AS cliente,
+            o.proyecto_id, p.nombre AS proyecto
+       FROM ops o
+       JOIN clientes c ON c.id = o.cliente_id
+       JOIN proyectos p ON p.id = o.proyecto_id
+      WHERE o.id = ?`,
+    [id]
+  );
+  if (!op) return null;
+
+  const [items] = await pool.query(
+    `SELECT oi.id, oi.producto_id, pr.codigo, pr.nombre AS producto, pr.formato,
+            oi.proveedor_id, prov.nombre AS proveedor,
+            oi.cantidad, oi.fecha_estimada_entrega, oi.estado,
+            (oi.fecha_estimada_entrega < CURDATE()
+              AND oi.estado NOT IN ('en_bodega', 'entregado', 'cancelado')) AS atrasado
+       FROM op_items oi
+       JOIN productos pr ON pr.id = oi.producto_id
+       LEFT JOIN proveedores prov ON prov.id = oi.proveedor_id
+      WHERE oi.op_id = ?
+      ORDER BY oi.id ASC`,
+    [id]
+  );
+
+  for (const item of items) {
+    const [etapas] = await pool.query(
+      `SELECT id, etapa, fecha_evento, nota FROM seguimiento_etapas
+        WHERE op_item_id = ? ORDER BY fecha_evento ASC, id ASC`,
+      [item.id]
+    );
+    item.atrasado = !!item.atrasado;
+    item.historial = etapas;
+  }
+
+  return { ...op, items };
+}
+
+/** Crea una OP. El cliente se deriva del proyecto elegido (evita inconsistencias). */
+export async function crearOP({ numero_op, proyecto_id, pedido_id, fecha_emision }) {
+  const [[proyecto]] = await pool.query(`SELECT cliente_id FROM proyectos WHERE id = ?`, [proyecto_id]);
+  if (!proyecto) {
+    const e = new Error('El proyecto indicado no existe.');
+    e.code = 'PROYECTO_INEXISTENTE';
+    throw e;
+  }
+  try {
+    const [result] = await pool.query(
+      `INSERT INTO ops (numero_op, proyecto_id, cliente_id, pedido_id, fecha_emision)
+       VALUES (?, ?, ?, ?, ?)`,
+      [numero_op, proyecto_id, proyecto.cliente_id, pedido_id || null, fecha_emision]
+    );
+    return obtenerOP(result.insertId);
+  } catch (err) {
+    if (err.code === 'ER_DUP_ENTRY') {
+      const e = new Error(`Ya existe una OP con el número "${numero_op}".`);
+      e.code = 'NUMERO_OP_DUPLICADO';
+      throw e;
+    }
+    throw err;
+  }
+}
+
+/** Actualiza los campos de cabecera de una OP (no el proyecto/cliente). */
+export async function actualizarOP(id, { numero_op, pedido_id, fecha_emision, estado_general }) {
+  try {
+    const [result] = await pool.query(
+      `UPDATE ops SET numero_op = ?, pedido_id = ?, fecha_emision = ?, estado_general = ? WHERE id = ?`,
+      [numero_op, pedido_id || null, fecha_emision, estado_general, id]
+    );
+    if (result.affectedRows === 0) return null;
+    return obtenerOP(id);
+  } catch (err) {
+    if (err.code === 'ER_DUP_ENTRY') {
+      const e = new Error(`Ya existe una OP con el número "${numero_op}".`);
+      e.code = 'NUMERO_OP_DUPLICADO';
+      throw e;
+    }
+    throw err;
+  }
+}
+
+/** Elimina una OP y, en cascada, sus líneas y el historial de etapas de cada línea. */
+export async function eliminarOP(id) {
+  const [itemIds] = await pool.query(`SELECT id FROM op_items WHERE op_id = ?`, [id]);
+  if (itemIds.length) {
+    const ids = itemIds.map((r) => r.id);
+    await pool.query(`DELETE FROM seguimiento_etapas WHERE op_item_id IN (?)`, [ids]);
+    await pool.query(`DELETE FROM op_items WHERE op_id = ?`, [id]);
+  }
+  const [result] = await pool.query(`DELETE FROM ops WHERE id = ?`, [id]);
+  return result.affectedRows > 0;
+}
+
+/** Agrega una línea (item) a una OP. */
+export async function crearOPItem({ op_id, producto_id, proveedor_id, cantidad, fecha_estimada_entrega, estado }) {
+  await pool.query(
+    `INSERT INTO op_items (op_id, producto_id, proveedor_id, cantidad, fecha_estimada_entrega, estado)
+     VALUES (?, ?, ?, ?, ?, ?)`,
+    [op_id, producto_id, proveedor_id || null, cantidad, fecha_estimada_entrega || null, estado || 'pendiente']
+  );
+  return obtenerOP(op_id);
+}
+
+/** Actualiza una línea de OP. */
+export async function actualizarOPItem(itemId, { producto_id, proveedor_id, cantidad, fecha_estimada_entrega, estado }) {
+  const [[item]] = await pool.query(`SELECT op_id FROM op_items WHERE id = ?`, [itemId]);
+  if (!item) return null;
+  await pool.query(
+    `UPDATE op_items SET producto_id = ?, proveedor_id = ?, cantidad = ?, fecha_estimada_entrega = ?, estado = ?
+      WHERE id = ?`,
+    [producto_id, proveedor_id || null, cantidad, fecha_estimada_entrega || null, estado, itemId]
+  );
+  return obtenerOP(item.op_id);
+}
+
+/** Elimina una línea de OP y su historial de etapas. */
+export async function eliminarOPItem(itemId) {
+  const [[item]] = await pool.query(`SELECT op_id FROM op_items WHERE id = ?`, [itemId]);
+  if (!item) return null;
+  await pool.query(`DELETE FROM seguimiento_etapas WHERE op_item_id = ?`, [itemId]);
+  await pool.query(`DELETE FROM op_items WHERE id = ?`, [itemId]);
+  return obtenerOP(item.op_id);
+}
+
+/** Registra un evento de seguimiento en una línea de OP (y sincroniza su estado actual). */
+export async function agregarEtapaSeguimiento({ op_item_id, etapa, fecha_evento, nota }) {
+  const [[item]] = await pool.query(`SELECT op_id FROM op_items WHERE id = ?`, [op_item_id]);
+  if (!item) {
+    const e = new Error('La línea de OP indicada no existe.');
+    e.code = 'ITEM_INEXISTENTE';
+    throw e;
+  }
+
+  const ESTADO_POR_ETAPA = {
+    produccion: 'en_produccion',
+    embarque: 'embarcado',
+    aduana: 'en_aduana',
+    bodega: 'en_bodega',
+    entrega: 'entregado',
+  };
+
+  await pool.query(
+    `INSERT INTO seguimiento_etapas (op_item_id, etapa, fecha_evento, nota) VALUES (?, ?, ?, ?)`,
+    [op_item_id, etapa, fecha_evento, nota || null]
+  );
+  if (ESTADO_POR_ETAPA[etapa]) {
+    await pool.query(`UPDATE op_items SET estado = ? WHERE id = ?`, [ESTADO_POR_ETAPA[etapa], op_item_id]);
+  }
+  return obtenerOP(item.op_id);
+}

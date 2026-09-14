@@ -52,4 +52,25 @@ export const api = {
   actualizarProyecto: (id, data) =>
     request(`/proyectos/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
   eliminarProyecto: (id) => request(`/proyectos/${id}`, { method: 'DELETE' }),
+
+  productos: () => request('/productos'),
+  proveedores: () => request('/proveedores'),
+
+  ops: (params = {}) => {
+    const qs = new URLSearchParams(
+      Object.fromEntries(Object.entries(params).filter(([, v]) => v))
+    ).toString();
+    return request(`/ops${qs ? `?${qs}` : ''}`);
+  },
+  op: (id) => request(`/ops/${id}`),
+  crearOP: (data) => request('/ops', { method: 'POST', body: JSON.stringify(data) }),
+  actualizarOP: (id, data) => request(`/ops/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+  eliminarOP: (id) => request(`/ops/${id}`, { method: 'DELETE' }),
+
+  crearOPItem: (opId, data) => request(`/ops/${opId}/items`, { method: 'POST', body: JSON.stringify(data) }),
+  actualizarOPItem: (itemId, data) =>
+    request(`/ops/items/${itemId}`, { method: 'PUT', body: JSON.stringify(data) }),
+  eliminarOPItem: (itemId) => request(`/ops/items/${itemId}`, { method: 'DELETE' }),
+  agregarEtapa: (itemId, data) =>
+    request(`/ops/items/${itemId}/etapas`, { method: 'POST', body: JSON.stringify(data) }),
 };

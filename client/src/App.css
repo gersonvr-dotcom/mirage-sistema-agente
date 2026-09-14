@@ -379,3 +379,72 @@ td {
 .chat-input-row input {
   flex: 1;
 }
+
+.badge-op-cancelada,
+.badge-item-cancelado {
+  color: var(--status-critical);
+  background: var(--status-critical-bg);
+}
+
+.badge-item-entregado {
+  background: rgba(34, 197, 94, 0.15);
+  color: #16a34a;
+}
+
+.op-header-card {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 16px;
+  align-items: start;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 16px;
+  margin-bottom: 8px;
+}
+
+.op-header-card p {
+  color: var(--text-h);
+  font-size: 15px;
+  margin-top: 2px;
+}
+
+.op-header-actions {
+  display: flex;
+  gap: 8px;
+  align-items: flex-start;
+  grid-column: 1 / -1;
+}
+
+.op-item-card {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 14px 16px;
+  margin-bottom: 12px;
+}
+
+.op-item-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 12px;
+  margin-bottom: 4px;
+}
+
+.op-item-historial {
+  margin: 8px 0 0;
+  padding-left: 18px;
+  font-size: 13px;
+  color: var(--text);
+}
+
+.op-item-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.op-etapa-form {
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px dashed var(--border);
+}

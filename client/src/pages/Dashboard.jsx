@@ -88,6 +88,7 @@ export function Dashboard() {
           <h1>Dashboard</h1>
         </div>
         <div>
+          <Link to="/ops">OPs</Link>
           <Link to="/chat">Chat</Link>
           <Link to="/proyectos">Proyectos</Link>
           {usuario?.rol === 'administrador' && <Link to="/usuarios">Usuarios</Link>}
