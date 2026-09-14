@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { api } from '../api';
 import { useAuth } from '../AuthContext';
+import { LogoMirage } from '../components/LogoMirage';
 
 const ORDEN_PROYECTOS = ['activo', 'en_pausa', 'cerrado'];
 const ORDEN_OPS = ['abierta', 'en_produccion', 'en_transito', 'cerrada', 'cancelada'];
@@ -82,7 +83,10 @@ export function Dashboard() {
   return (
     <div className="page">
       <header className="topbar">
-        <h1>Dashboard</h1>
+        <div className="topbar-brand">
+          <LogoMirage className="topbar-logo" />
+          <h1>Dashboard</h1>
+        </div>
         <div>
           <Link to="/chat">Chat</Link>
           <Link to="/proyectos">Proyectos</Link>

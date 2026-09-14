@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { api } from '../api';
 import { useAuth } from '../AuthContext';
+import { LogoMirage } from '../components/LogoMirage';
 
 const FORM_INICIAL = { email: '', password: '', nombre: '', rol: 'operador' };
 
@@ -53,7 +54,10 @@ export function Usuarios() {
   return (
     <div className="page">
       <header className="topbar">
-        <h1>Usuarios</h1>
+        <div className="topbar-brand">
+          <LogoMirage className="topbar-logo" />
+          <h1>Usuarios</h1>
+        </div>
         <div>
           <Link to="/proyectos">← Proyectos</Link>
           <span>{usuario?.nombre}</span>

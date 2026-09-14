@@ -2,6 +2,7 @@ import { useEffect, useState, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import { api } from '../api';
 import { useAuth } from '../AuthContext';
+import { LogoMirage } from '../components/LogoMirage';
 
 export function Proyectos() {
   const [proyectos, setProyectos] = useState([]);
@@ -50,7 +51,10 @@ export function Proyectos() {
   return (
     <div className="page">
       <header className="topbar">
-        <h1>Proyectos</h1>
+        <div className="topbar-brand">
+          <LogoMirage className="topbar-logo" />
+          <h1>Proyectos</h1>
+        </div>
         <div>
           <Link to="/chat">Chat</Link>
           <Link to="/dashboard">Dashboard</Link>

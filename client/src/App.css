@@ -11,12 +11,27 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
+  gap: 24px;
+  flex-wrap: wrap;
   margin-bottom: 16px;
 }
 
 .topbar h1 {
   font-size: 28px;
   margin: 0;
+}
+
+.topbar-brand {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.topbar-logo {
+  height: 20px;
+  width: auto;
+  color: var(--text-h);
+  flex: none;
 }
 
 .topbar > div {
@@ -40,13 +55,15 @@
   width: 320px;
   padding: 32px;
   border: 1px solid var(--border);
-  border-radius: 8px;
+  border-radius: 16px;
 }
 
-.login-form h1 {
-  font-size: 28px;
-  margin: 0 0 8px;
-  text-align: center;
+.login-logo {
+  height: 30px;
+  width: auto;
+  color: var(--text-h);
+  align-self: center;
+  margin-bottom: 8px;
 }
 
 label {
@@ -63,7 +80,7 @@ textarea {
   font: inherit;
   padding: 8px 10px;
   border: 1px solid var(--border);
-  border-radius: 6px;
+  border-radius: 10px;
   background: var(--bg);
   color: var(--text-h);
   box-sizing: border-box;
@@ -76,9 +93,9 @@ textarea {
 
 button {
   font: inherit;
-  padding: 8px 14px;
+  padding: 9px 20px;
   border: 1px solid var(--accent-border);
-  border-radius: 6px;
+  border-radius: 999px;
   background: var(--accent-bg);
   color: var(--text-h);
   cursor: pointer;
@@ -92,9 +109,9 @@ button:disabled {
 .button-link {
   display: inline-flex;
   align-items: center;
-  padding: 8px 14px;
+  padding: 9px 20px;
   border: 1px solid var(--accent-border);
-  border-radius: 6px;
+  border-radius: 999px;
   background: var(--accent-bg);
   color: var(--text-h);
   text-decoration: none;

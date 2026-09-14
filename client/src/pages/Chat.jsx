@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { api } from '../api';
 import { useAuth } from '../AuthContext';
+import { LogoMirage } from '../components/LogoMirage';
 
 export function Chat() {
   const [mensajes, setMensajes] = useState([]);
@@ -68,7 +69,10 @@ export function Chat() {
   return (
     <div className="page chat-page">
       <header className="topbar">
-        <h1>Chat del agente</h1>
+        <div className="topbar-brand">
+          <LogoMirage className="topbar-logo" />
+          <h1>Chat del agente</h1>
+        </div>
         <div>
           <Link to="/dashboard">Dashboard</Link>
           <Link to="/proyectos">Proyectos</Link>

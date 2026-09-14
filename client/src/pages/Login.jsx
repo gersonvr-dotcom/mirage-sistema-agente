@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../AuthContext';
+import { LogoMirage } from '../components/LogoMirage';
 
 export function Login() {
   const [email, setEmail] = useState('');
@@ -27,7 +28,7 @@ export function Login() {
   return (
     <div className="login-page">
       <form onSubmit={handleSubmit} className="login-form">
-        <h1>Mirage</h1>
+        <LogoMirage className="login-logo" />
         <label>
           Email
           <input
