@@ -94,7 +94,7 @@
   background: none;
   border: none;
   color: var(--text);
-  font-size: 11px;
+  font-size: 17px;
   line-height: 1;
   cursor: pointer;
 }
@@ -107,7 +107,6 @@
 .sidebar-sub .sidebar-link,
 .sidebar-sub .sidebar-group-label {
   padding-left: 36px;
-  font-size: 13.5px;
 }
 
 .sidebar-sub .sidebar-sub .sidebar-link {

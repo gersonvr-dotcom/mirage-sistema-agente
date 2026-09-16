@@ -43,7 +43,7 @@ export function Sidebar() {
             aria-label="Mostrar proyectos y OPs"
             aria-expanded={abierto}
           >
-            {abierto ? '▾' : '▸'}
+            {abierto ? '▼' : '▶'}
           </button>
         </div>
 
