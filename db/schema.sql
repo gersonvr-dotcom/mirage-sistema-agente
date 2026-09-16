@@ -79,15 +79,20 @@ CREATE TABLE pedidos (
 
 -- Orden de Producción: hub central de la cadena OP -> Cliente -> Proyecto
 CREATE TABLE ops (
-  id                INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
-  numero_op         VARCHAR(40) NOT NULL UNIQUE,
-  pedido_id         INT UNSIGNED,
-  proyecto_id       INT UNSIGNED NOT NULL,
-  cliente_id        INT UNSIGNED NOT NULL,
-  fecha_emision     DATE NOT NULL,
-  estado_general    ENUM('abierta','en_produccion','en_transito','cerrada','cancelada') NOT NULL DEFAULT 'abierta',
-  created_at        TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  id                      INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  numero_op               VARCHAR(40) NOT NULL UNIQUE,
+  pedido_id               INT UNSIGNED,
+  cotizacion_id           INT UNSIGNED,
+  proyecto_id             INT UNSIGNED NOT NULL,
+  cliente_id              INT UNSIGNED NOT NULL,
+  fecha_emision           DATE NOT NULL,
+  fecha_pactada           DATE,
+  oc_cliente              VARCHAR(60),
+  observaciones_comercial VARCHAR(500),
+  estado_general          ENUM('abierta','en_produccion','en_transito','cerrada','cancelada') NOT NULL DEFAULT 'abierta',
+  created_at              TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
   FOREIGN KEY (pedido_id) REFERENCES pedidos(id),
+  FOREIGN KEY (cotizacion_id) REFERENCES cotizaciones(id),
   FOREIGN KEY (proyecto_id) REFERENCES proyectos(id),
   FOREIGN KEY (cliente_id) REFERENCES clientes(id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
