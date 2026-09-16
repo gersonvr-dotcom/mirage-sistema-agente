@@ -17,7 +17,7 @@ export function Login() {
     setLoading(true);
     try {
       await login(email, password);
-      navigate('/proyectos', { replace: true });
+      navigate('/chat', { replace: true });
     } catch (err) {
       setError(err.message);
     } finally {

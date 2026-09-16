@@ -3,58 +3,36 @@ import { Link, useLocation } from 'react-router-dom';
 import { useAuth } from '../AuthContext';
 import { LogoMirage } from './LogoMirage';
 
-/** Menú anidado Clientes -> Proyectos -> OPs: cada nivel navega al hacer clic en su nombre,
- * y tiene su propia flechita para desplegar/cerrar el siguiente nivel sin salir de la página. */
+/** Menú anidado Clientes -> Proyectos -> OPs: pasar el mouse sobre "Clientes" despliega los
+ * 3 niveles juntos; hacer clic en cualquiera de los tres navega a su página. */
 function ClientesMenu() {
   const location = useLocation();
   const enClientes = location.pathname.startsWith('/clientes');
   const enProyectos = location.pathname.startsWith('/proyectos');
   const enOps = location.pathname.startsWith('/ops');
 
-  const [abierto, setAbierto] = useState(false);
-  const [abiertoProyectos, setAbiertoProyectos] = useState(false);
+  const [hover, setHover] = useState(false);
 
   return (
-    <div className="clientes-menu">
-      <div className="nested-nav-row">
-        <Link to="/clientes" className={enClientes ? 'nav-active' : ''}>
-          Clientes
-        </Link>
-        <button
-          type="button"
-          className="nav-caret"
-          onClick={() => setAbierto((v) => !v)}
-          aria-label="Mostrar proyectos"
-          aria-expanded={abierto}
-        >
-          {abierto ? '▾' : '▸'}
-        </button>
-      </div>
+    <div
+      className="clientes-menu"
+      onMouseEnter={() => setHover(true)}
+      onMouseLeave={() => setHover(false)}
+    >
+      <Link to="/clientes" className={enClientes ? 'nav-active' : ''}>
+        Clientes
+      </Link>
 
-      {abierto && (
+      {hover && (
         <div className="clientes-dropdown">
-          <div className="nested-nav-row">
-            <Link to="/proyectos" className={enProyectos ? 'nav-active' : ''}>
-              Proyectos
+          <Link to="/proyectos" className={enProyectos ? 'nav-active' : ''}>
+            Proyectos
+          </Link>
+          <div className="nested-nav-sub">
+            <Link to="/ops" className={enOps ? 'nav-active' : ''}>
+              OPs
             </Link>
-            <button
-              type="button"
-              className="nav-caret"
-              onClick={() => setAbiertoProyectos((v) => !v)}
-              aria-label="Mostrar OPs"
-              aria-expanded={abiertoProyectos}
-            >
-              {abiertoProyectos ? '▾' : '▸'}
-            </button>
           </div>
-
-          {abiertoProyectos && (
-            <div className="nested-nav-sub">
-              <Link to="/ops" className={enOps ? 'nav-active' : ''}>
-                OPs
-              </Link>
-            </div>
-          )}
         </div>
       )}
     </div>
@@ -72,10 +50,12 @@ export function TopBar({ title }) {
         <h1>{title}</h1>
       </div>
       <div className="topbar-nav">
-        <ClientesMenu />
-        <Link to="/chat">Chat</Link>
-        <Link to="/dashboard">Dashboard</Link>
-        {esAdmin && <Link to="/usuarios">Usuarios</Link>}
+        <nav className="topbar-menu">
+          <ClientesMenu />
+          <Link to="/chat">Chat</Link>
+          <Link to="/dashboard">Dashboard</Link>
+          {esAdmin && <Link to="/usuarios">Usuarios</Link>}
+        </nav>
         <span>{usuario?.nombre}</span>
         <button onClick={logout}>Salir</button>
       </div>

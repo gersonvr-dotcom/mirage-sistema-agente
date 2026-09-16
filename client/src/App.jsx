@@ -117,7 +117,7 @@ export default function App() {
               </AdminRoute>
             }
           />
-          <Route path="*" element={<Navigate to="/proyectos" replace />} />
+          <Route path="*" element={<Navigate to="/chat" replace />} />
         </Routes>
       </AuthProvider>
     </BrowserRouter>

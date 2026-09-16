@@ -40,24 +40,23 @@
   gap: 16px;
 }
 
-.nested-nav-row {
+.topbar-menu {
   display: flex;
   align-items: center;
-  gap: 4px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
 }
 
-.nav-caret {
-  padding: 2px 6px;
-  border: none;
-  background: none;
-  color: var(--text);
-  font-size: 11px;
-  line-height: 1;
-  border-radius: 999px;
+.topbar-menu > * {
+  display: flex;
+  align-items: center;
+  padding: 8px 16px;
+  border-left: 1px solid var(--border);
+  white-space: nowrap;
 }
 
-.nav-caret:hover {
-  background: var(--code-bg);
+.topbar-menu > *:first-child {
+  border-left: none;
 }
 
 .nav-active {
@@ -72,12 +71,12 @@
 .clientes-dropdown {
   position: absolute;
   top: 100%;
-  left: 0;
-  margin-top: 10px;
+  left: -1px;
+  margin-top: 1px;
   min-width: 160px;
   padding: 10px 12px;
   border: 1px solid var(--border);
-  border-radius: 8px;
+  border-radius: 0 0 8px 8px;
   background: var(--bg);
   box-shadow: var(--shadow);
   z-index: 30;
@@ -89,12 +88,6 @@
 .nested-nav-sub {
   padding-left: 14px;
   border-left: 1px dashed var(--border);
-}
-
-.topbar > div {
-  display: flex;
-  align-items: center;
-  gap: 12px;
 }
 
 .login-page {
