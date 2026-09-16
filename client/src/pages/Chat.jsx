@@ -1,6 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
 import { api } from '../api';
-import { TopBar } from '../components/TopBar';
 
 export function Chat() {
   const [mensajes, setMensajes] = useState([]);
@@ -65,7 +64,7 @@ export function Chat() {
 
   return (
     <div className="page chat-page">
-      <TopBar title="Chat del agente" />
+      <h1>Chat del agente</h1>
 
       <div className="chat-meta">
         <select

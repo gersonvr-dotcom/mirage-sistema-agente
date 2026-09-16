@@ -6,6 +6,6 @@ export function AdminRoute({ children }) {
 
   if (usuario === undefined) return <p style={{ padding: 24 }}>Cargando…</p>;
   if (usuario === null) return <Navigate to="/login" replace />;
-  if (usuario.rol !== 'administrador') return <Navigate to="/proyectos" replace />;
+  if (usuario.rol !== 'administrador') return <Navigate to="/chat" replace />;
   return children;
 }

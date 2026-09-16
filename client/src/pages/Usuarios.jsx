@@ -1,6 +1,5 @@
 import { useEffect, useState } from 'react';
 import { api } from '../api';
-import { TopBar } from '../components/TopBar';
 
 const FORM_INICIAL = { email: '', password: '', nombre: '', rol: 'operador' };
 
@@ -50,7 +49,7 @@ export function Usuarios() {
 
   return (
     <div className="page">
-      <TopBar title="Usuarios" />
+      <h1>Usuarios</h1>
 
       {error && <p className="error">{error}</p>}
 

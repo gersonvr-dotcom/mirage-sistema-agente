@@ -1,6 +1,5 @@
 import { useEffect, useState } from 'react';
 import { api } from '../api';
-import { TopBar } from '../components/TopBar';
 
 const ORDEN_PROYECTOS = ['activo', 'en_pausa', 'cerrado'];
 const ORDEN_OPS = ['abierta', 'en_produccion', 'en_transito', 'cerrada', 'cancelada'];
@@ -79,7 +78,7 @@ export function Dashboard() {
 
   return (
     <div className="page">
-      <TopBar title="Dashboard" />
+      <h1>Dashboard</h1>
 
       {error && <p className="error">{error}</p>}
 

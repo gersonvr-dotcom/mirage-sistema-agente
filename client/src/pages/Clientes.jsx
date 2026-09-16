@@ -2,7 +2,6 @@ import { useEffect, useState, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import { api } from '../api';
 import { useAuth } from '../AuthContext';
-import { TopBar } from '../components/TopBar';
 
 export function Clientes() {
   const [clientes, setClientes] = useState([]);
@@ -49,7 +48,7 @@ export function Clientes() {
 
   return (
     <div className="page">
-      <TopBar title="Clientes" />
+      <h1>Clientes</h1>
 
       <form onSubmit={handleSearch} className="filters">
         <input

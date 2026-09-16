@@ -2,7 +2,6 @@ import { useEffect, useState, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import { api } from '../api';
 import { useAuth } from '../AuthContext';
-import { TopBar } from '../components/TopBar';
 
 export function Proyectos() {
   const [proyectos, setProyectos] = useState([]);
@@ -50,7 +49,7 @@ export function Proyectos() {
 
   return (
     <div className="page">
-      <TopBar title="Proyectos" />
+      <h1>Proyectos</h1>
 
       <form onSubmit={handleSearch} className="filters">
         <input

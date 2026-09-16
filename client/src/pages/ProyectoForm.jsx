@@ -1,7 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { api } from '../api';
-import { TopBar } from '../components/TopBar';
 
 const ESTADO_INICIAL = { cliente_id: '', nombre: '', descripcion: '', estado: 'activo' };
 
@@ -62,7 +61,7 @@ export function ProyectoForm() {
 
   return (
     <div className="page">
-      <TopBar title={titulo} />
+      <h1>{titulo}</h1>
       {loading ? (
         <p>Cargando…</p>
       ) : (

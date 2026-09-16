@@ -1,7 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { api } from '../api';
-import { TopBar } from '../components/TopBar';
 
 const FORM_INICIAL = { nombre: '', ruc_nit: '', contacto: '', email: '', telefono: '' };
 
@@ -56,7 +55,7 @@ export function ClienteForm() {
 
   return (
     <div className="page">
-      <TopBar title={editando ? 'Editar cliente' : 'Nuevo cliente'} />
+      <h1>{editando ? 'Editar cliente' : 'Nuevo cliente'}</h1>
       {loading ? (
         <p>Cargando…</p>
       ) : (

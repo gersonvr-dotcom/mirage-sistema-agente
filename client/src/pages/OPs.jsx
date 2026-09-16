@@ -2,7 +2,6 @@ import { useEffect, useState, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import { api } from '../api';
 import { useAuth } from '../AuthContext';
-import { TopBar } from '../components/TopBar';
 
 export function OPs() {
   const [ops, setOps] = useState([]);
@@ -50,7 +49,7 @@ export function OPs() {
 
   return (
     <div className="page">
-      <TopBar title="Órdenes de producción" />
+      <h1>Órdenes de producción</h1>
 
       <form onSubmit={handleSearch} className="filters">
         <input
