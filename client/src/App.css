@@ -9,11 +9,17 @@
 
 .topbar {
   display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.topbar-row {
+  display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 24px;
   flex-wrap: wrap;
-  margin-bottom: 16px;
 }
 
 .topbar h1 {
@@ -34,15 +40,26 @@
   flex: none;
 }
 
-.topbar-nav {
+.topbar-account {
   display: flex;
   align-items: center;
   gap: 16px;
 }
 
+.menu-toggle {
+  padding: 8px 12px;
+  font-size: 16px;
+  line-height: 1;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--bg);
+  color: var(--text-h);
+}
+
 .topbar-menu {
   display: flex;
   align-items: center;
+  width: fit-content;
   border: 1px solid var(--border);
   border-radius: 8px;
 }

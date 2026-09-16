@@ -42,23 +42,38 @@ function ClientesMenu() {
 export function TopBar({ title }) {
   const { usuario, logout } = useAuth();
   const esAdmin = usuario?.rol === 'administrador';
+  const [menuAbierto, setMenuAbierto] = useState(false);
 
   return (
     <header className="topbar">
-      <div className="topbar-brand">
-        <LogoMirage className="topbar-logo" />
-        <h1>{title}</h1>
+      <div className="topbar-row">
+        <button
+          type="button"
+          className="menu-toggle"
+          onClick={() => setMenuAbierto((v) => !v)}
+          aria-label="Mostrar menú"
+          aria-expanded={menuAbierto}
+        >
+          ☰
+        </button>
+        <div className="topbar-brand">
+          <LogoMirage className="topbar-logo" />
+          <h1>{title}</h1>
+        </div>
+        <div className="topbar-account">
+          <span>{usuario?.nombre}</span>
+          <button onClick={logout}>Salir</button>
+        </div>
       </div>
-      <div className="topbar-nav">
+
+      {menuAbierto && (
         <nav className="topbar-menu">
           <ClientesMenu />
           <Link to="/chat">Chat</Link>
           <Link to="/dashboard">Dashboard</Link>
           {esAdmin && <Link to="/usuarios">Usuarios</Link>}
         </nav>
-        <span>{usuario?.nombre}</span>
-        <button onClick={logout}>Salir</button>
-      </div>
+      )}
     </header>
   );
 }
