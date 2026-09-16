@@ -34,6 +34,63 @@
   flex: none;
 }
 
+.topbar-nav {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.nested-nav-row {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.nav-caret {
+  padding: 2px 6px;
+  border: none;
+  background: none;
+  color: var(--text);
+  font-size: 11px;
+  line-height: 1;
+  border-radius: 999px;
+}
+
+.nav-caret:hover {
+  background: var(--code-bg);
+}
+
+.nav-active {
+  color: var(--text-h);
+  font-weight: 600;
+}
+
+.clientes-menu {
+  position: relative;
+}
+
+.clientes-dropdown {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  margin-top: 10px;
+  min-width: 160px;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--bg);
+  box-shadow: var(--shadow);
+  z-index: 30;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.nested-nav-sub {
+  padding-left: 14px;
+  border-left: 1px dashed var(--border);
+}
+
 .topbar > div {
   display: flex;
   align-items: center;
@@ -129,6 +186,11 @@ button:disabled {
 .filters input {
   flex: 1;
   min-width: 200px;
+}
+
+.table-scroll {
+  width: 100%;
+  overflow-x: auto;
 }
 
 table {

@@ -1,8 +1,6 @@
 import { useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
 import { api } from '../api';
-import { useAuth } from '../AuthContext';
-import { LogoMirage } from '../components/LogoMirage';
+import { TopBar } from '../components/TopBar';
 
 const FORM_INICIAL = { email: '', password: '', nombre: '', rol: 'operador' };
 
@@ -13,7 +11,6 @@ export function Usuarios() {
   const [form, setForm] = useState(FORM_INICIAL);
   const [saving, setSaving] = useState(false);
   const [formError, setFormError] = useState(null);
-  const { usuario } = useAuth();
 
   async function cargar() {
     setLoading(true);
@@ -53,22 +50,14 @@ export function Usuarios() {
 
   return (
     <div className="page">
-      <header className="topbar">
-        <div className="topbar-brand">
-          <LogoMirage className="topbar-logo" />
-          <h1>Usuarios</h1>
-        </div>
-        <div>
-          <Link to="/proyectos">← Proyectos</Link>
-          <span>{usuario?.nombre}</span>
-        </div>
-      </header>
+      <TopBar title="Usuarios" />
 
       {error && <p className="error">{error}</p>}
 
       {loading ? (
         <p>Cargando…</p>
       ) : (
+        <div className="table-scroll">
         <table>
           <thead>
             <tr>
@@ -91,6 +80,7 @@ export function Usuarios() {
             ))}
           </tbody>
         </table>
+        </div>
       )}
 
       <h2 style={{ marginTop: 32 }}>Nuevo usuario</h2>

@@ -1,8 +1,8 @@
 import { useEffect, useState } from 'react';
-import { Link, useNavigate, useParams } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 import { api } from '../api';
 import { useAuth } from '../AuthContext';
-import { LogoMirage } from '../components/LogoMirage';
+import { TopBar } from '../components/TopBar';
 
 const ESTADOS_OP = ['abierta', 'en_produccion', 'en_transito', 'cerrada', 'cancelada'];
 const ESTADOS_ITEM = ['pendiente', 'en_produccion', 'embarcado', 'en_aduana', 'en_bodega', 'entregado', 'cancelado'];
@@ -153,15 +153,7 @@ export function OPDetail() {
 
   return (
     <div className="page">
-      <header className="topbar">
-        <div className="topbar-brand">
-          <LogoMirage className="topbar-logo" />
-          <h1>{op.numero_op}</h1>
-        </div>
-        <div>
-          <Link to="/ops">← OPs</Link>
-        </div>
-      </header>
+      <TopBar title={op.numero_op} />
 
       {error && <p className="error">{error}</p>}
 

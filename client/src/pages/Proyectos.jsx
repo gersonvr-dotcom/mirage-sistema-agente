@@ -2,7 +2,7 @@ import { useEffect, useState, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import { api } from '../api';
 import { useAuth } from '../AuthContext';
-import { LogoMirage } from '../components/LogoMirage';
+import { TopBar } from '../components/TopBar';
 
 export function Proyectos() {
   const [proyectos, setProyectos] = useState([]);
@@ -11,7 +11,7 @@ export function Proyectos() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [confirmandoId, setConfirmandoId] = useState(null);
-  const { usuario, logout } = useAuth();
+  const { usuario } = useAuth();
   const esAdmin = usuario?.rol === 'administrador';
 
   const cargar = useCallback(async (filtros) => {
@@ -50,20 +50,7 @@ export function Proyectos() {
 
   return (
     <div className="page">
-      <header className="topbar">
-        <div className="topbar-brand">
-          <LogoMirage className="topbar-logo" />
-          <h1>Proyectos</h1>
-        </div>
-        <div>
-          <Link to="/ops">OPs</Link>
-          <Link to="/chat">Chat</Link>
-          <Link to="/dashboard">Dashboard</Link>
-          {esAdmin && <Link to="/usuarios">Usuarios</Link>}
-          <span>{usuario?.nombre}</span>
-          <button onClick={logout}>Salir</button>
-        </div>
-      </header>
+      <TopBar title="Proyectos" />
 
       <form onSubmit={handleSearch} className="filters">
         <input
@@ -88,6 +75,7 @@ export function Proyectos() {
       {loading ? (
         <p>Cargando…</p>
       ) : (
+        <div className="table-scroll">
         <table>
           <thead>
             <tr>
@@ -133,6 +121,7 @@ export function Proyectos() {
             )}
           </tbody>
         </table>
+        </div>
       )}
     </div>
   );

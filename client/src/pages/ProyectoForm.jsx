@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { api } from '../api';
+import { TopBar } from '../components/TopBar';
 
 const ESTADO_INICIAL = { cliente_id: '', nombre: '', descripcion: '', estado: 'activo' };
 
@@ -57,11 +58,14 @@ export function ProyectoForm() {
     }
   }
 
-  if (loading) return <p style={{ padding: 24 }}>Cargando…</p>;
+  const titulo = editando ? 'Editar proyecto' : 'Nuevo proyecto';
 
   return (
     <div className="page">
-      <h1>{editando ? 'Editar proyecto' : 'Nuevo proyecto'}</h1>
+      <TopBar title={titulo} />
+      {loading ? (
+        <p>Cargando…</p>
+      ) : (
       <form onSubmit={handleSubmit} className="form">
         <label>
           Cliente
@@ -108,6 +112,7 @@ export function ProyectoForm() {
           </button>
         </div>
       </form>
+      )}
     </div>
   );
 }

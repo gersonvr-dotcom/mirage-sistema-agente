@@ -3,6 +3,8 @@ import { AuthProvider } from './AuthContext';
 import { ProtectedRoute } from './components/ProtectedRoute';
 import { AdminRoute } from './components/AdminRoute';
 import { Login } from './pages/Login';
+import { Clientes } from './pages/Clientes';
+import { ClienteForm } from './pages/ClienteForm';
 import { Proyectos } from './pages/Proyectos';
 import { ProyectoForm } from './pages/ProyectoForm';
 import { Usuarios } from './pages/Usuarios';
@@ -19,6 +21,30 @@ export default function App() {
       <AuthProvider>
         <Routes>
           <Route path="/login" element={<Login />} />
+          <Route
+            path="/clientes"
+            element={
+              <ProtectedRoute>
+                <Clientes />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/clientes/nuevo"
+            element={
+              <ProtectedRoute>
+                <ClienteForm />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/clientes/:id"
+            element={
+              <ProtectedRoute>
+                <ClienteForm />
+              </ProtectedRoute>
+            }
+          />
           <Route
             path="/proyectos"
             element={

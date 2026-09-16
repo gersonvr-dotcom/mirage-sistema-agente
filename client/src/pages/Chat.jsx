@@ -1,8 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
-import { Link } from 'react-router-dom';
 import { api } from '../api';
-import { useAuth } from '../AuthContext';
-import { LogoMirage } from '../components/LogoMirage';
+import { TopBar } from '../components/TopBar';
 
 export function Chat() {
   const [mensajes, setMensajes] = useState([]);
@@ -13,7 +11,6 @@ export function Chat() {
   const [enviando, setEnviando] = useState(false);
   const [error, setError] = useState(null);
   const [limitReached, setLimitReached] = useState(false);
-  const { usuario, logout } = useAuth();
   const finRef = useRef(null);
   // Recuerda a qué proveedor pertenece el límite cargado: cambiar de proveedor arranca una
   // conversación nueva (ver chat.js), así que el bloqueo no debe seguir aplicando en ese caso.
@@ -68,20 +65,7 @@ export function Chat() {
 
   return (
     <div className="page chat-page">
-      <header className="topbar">
-        <div className="topbar-brand">
-          <LogoMirage className="topbar-logo" />
-          <h1>Chat del agente</h1>
-        </div>
-        <div>
-          <Link to="/ops">OPs</Link>
-          <Link to="/dashboard">Dashboard</Link>
-          <Link to="/proyectos">Proyectos</Link>
-          {usuario?.rol === 'administrador' && <Link to="/usuarios">Usuarios</Link>}
-          <span>{usuario?.nombre}</span>
-          <button onClick={logout}>Salir</button>
-        </div>
-      </header>
+      <TopBar title="Chat del agente" />
 
       <div className="chat-meta">
         <select

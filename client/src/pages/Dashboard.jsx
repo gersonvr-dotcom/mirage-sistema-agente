@@ -1,8 +1,6 @@
 import { useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
 import { api } from '../api';
-import { useAuth } from '../AuthContext';
-import { LogoMirage } from '../components/LogoMirage';
+import { TopBar } from '../components/TopBar';
 
 const ORDEN_PROYECTOS = ['activo', 'en_pausa', 'cerrado'];
 const ORDEN_OPS = ['abierta', 'en_produccion', 'en_transito', 'cerrada', 'cancelada'];
@@ -66,7 +64,6 @@ export function Dashboard() {
   const [auditoria, setAuditoria] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const { usuario, logout } = useAuth();
 
   useEffect(() => {
     api
@@ -82,20 +79,7 @@ export function Dashboard() {
 
   return (
     <div className="page">
-      <header className="topbar">
-        <div className="topbar-brand">
-          <LogoMirage className="topbar-logo" />
-          <h1>Dashboard</h1>
-        </div>
-        <div>
-          <Link to="/ops">OPs</Link>
-          <Link to="/chat">Chat</Link>
-          <Link to="/proyectos">Proyectos</Link>
-          {usuario?.rol === 'administrador' && <Link to="/usuarios">Usuarios</Link>}
-          <span>{usuario?.nombre}</span>
-          <button onClick={logout}>Salir</button>
-        </div>
-      </header>
+      <TopBar title="Dashboard" />
 
       {error && <p className="error">{error}</p>}
 
@@ -147,6 +131,7 @@ export function Dashboard() {
             {auditoria.length === 0 ? (
               <p className="chat-empty">El agente todavía no ha creado, editado ni eliminado ningún proyecto.</p>
             ) : (
+              <div className="table-scroll">
               <table>
                 <thead>
                   <tr>
@@ -165,6 +150,7 @@ export function Dashboard() {
                   ))}
                 </tbody>
               </table>
+              </div>
             )}
           </section>
         </>

@@ -128,10 +128,60 @@ export async function materialPendiente({ cliente, proyecto } = {}) {
 /** Lista de clientes (para selects/formularios), opcionalmente filtrada por nombre parcial. */
 export async function listarClientes({ q } = {}) {
   const [rows] = await pool.query(
-    `SELECT id, nombre FROM clientes ${q ? 'WHERE nombre LIKE ?' : ''} ORDER BY nombre ASC`,
+    `SELECT c.id, c.nombre, c.ruc_nit, c.contacto, c.email, c.telefono, c.created_at,
+            (SELECT COUNT(*) FROM proyectos p WHERE p.cliente_id = c.id) AS num_proyectos
+       FROM clientes c
+      ${q ? 'WHERE c.nombre LIKE ?' : ''}
+      ORDER BY c.nombre ASC`,
     q ? [`%${q}%`] : []
   );
   return rows;
+}
+
+/** Un cliente por id. */
+export async function obtenerCliente(id) {
+  const [[cliente]] = await pool.query(
+    `SELECT id, nombre, ruc_nit, contacto, email, telefono, created_at FROM clientes WHERE id = ?`,
+    [id]
+  );
+  return cliente ?? null;
+}
+
+/** Crea un cliente y devuelve el registro creado. */
+export async function crearCliente({ nombre, ruc_nit, contacto, email, telefono }) {
+  const [result] = await pool.query(
+    `INSERT INTO clientes (nombre, ruc_nit, contacto, email, telefono) VALUES (?, ?, ?, ?, ?)`,
+    [nombre, ruc_nit || null, contacto || null, email || null, telefono || null]
+  );
+  return obtenerCliente(result.insertId);
+}
+
+/** Actualiza un cliente existente y devuelve el registro actualizado (o null si no existe). */
+export async function actualizarCliente(id, { nombre, ruc_nit, contacto, email, telefono }) {
+  const [result] = await pool.query(
+    `UPDATE clientes SET nombre = ?, ruc_nit = ?, contacto = ?, email = ?, telefono = ? WHERE id = ?`,
+    [nombre, ruc_nit || null, contacto || null, email || null, telefono || null, id]
+  );
+  if (result.affectedRows === 0) return null;
+  return obtenerCliente(id);
+}
+
+/**
+ * Elimina un cliente. Lanza un error con code 'TIENE_DEPENDENCIAS' si tiene proyectos,
+ * OPs, cotizaciones o pedidos asociados.
+ */
+export async function eliminarCliente(id) {
+  try {
+    const [result] = await pool.query(`DELETE FROM clientes WHERE id = ?`, [id]);
+    return result.affectedRows > 0;
+  } catch (err) {
+    if (err.code === 'ER_ROW_IS_REFERENCED_2' || err.code === 'ER_ROW_IS_REFERENCED') {
+      const e = new Error('El cliente tiene proyectos, OPs, cotizaciones o pedidos asociados y no se puede eliminar.');
+      e.code = 'TIENE_DEPENDENCIAS';
+      throw e;
+    }
+    throw err;
+  }
 }
 
 /** Lista de proyectos con el nombre del cliente, filtrable por texto y/o estado. */

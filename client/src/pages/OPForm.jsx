@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { api } from '../api';
+import { TopBar } from '../components/TopBar';
 
 export function OPForm() {
   const navigate = useNavigate();
@@ -33,7 +34,7 @@ export function OPForm() {
 
   return (
     <div className="page">
-      <h1>Nueva OP</h1>
+      <TopBar title="Nueva OP" />
       <form onSubmit={handleSubmit} className="form">
         <label>
           Número de OP

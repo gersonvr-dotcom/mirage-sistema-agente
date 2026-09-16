@@ -29,7 +29,17 @@ export const api = {
   logout: () => request('/auth/logout', { method: 'POST' }),
   me: () => request('/auth/me'),
 
-  clientes: () => request('/clientes'),
+  clientes: (params = {}) => {
+    const qs = new URLSearchParams(
+      Object.fromEntries(Object.entries(params).filter(([, v]) => v))
+    ).toString();
+    return request(`/clientes${qs ? `?${qs}` : ''}`);
+  },
+  cliente: (id) => request(`/clientes/${id}`),
+  crearCliente: (data) => request('/clientes', { method: 'POST', body: JSON.stringify(data) }),
+  actualizarCliente: (id, data) =>
+    request(`/clientes/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+  eliminarCliente: (id) => request(`/clientes/${id}`, { method: 'DELETE' }),
 
   usuarios: () => request('/usuarios'),
   crearUsuario: (data) => request('/usuarios', { method: 'POST', body: JSON.stringify(data) }),
