@@ -95,21 +95,35 @@ export function Proyectos() {
                 </td>
                 <td>{new Date(p.created_at).toLocaleDateString()}</td>
                 <td>
-                  <Link to={`/proyectos/${p.id}`}>Editar</Link>{' '}
-                  {esAdmin &&
-                    (confirmandoId === p.id ? (
-                      <>
-                        <span>¿Seguro?</span>{' '}
-                        <button onClick={() => handleDelete(p.id)}>Sí, eliminar</button>{' '}
-                        <button type="button" onClick={() => setConfirmandoId(null)}>
-                          No
+                  <div className="row-actions">
+                    <Link to={`/proyectos/${p.id}`} className="btn-row-action">
+                      Editar
+                    </Link>
+                    {esAdmin &&
+                      (confirmandoId === p.id ? (
+                        <span className="row-actions-confirm">
+                          ¿Seguro?
+                          <button className="btn-row-action btn-row-action-danger" onClick={() => handleDelete(p.id)}>
+                            Sí, eliminar
+                          </button>
+                          <button
+                            type="button"
+                            className="btn-row-action"
+                            onClick={() => setConfirmandoId(null)}
+                          >
+                            No
+                          </button>
+                        </span>
+                      ) : (
+                        <button
+                          type="button"
+                          className="btn-row-action btn-row-action-danger"
+                          onClick={() => setConfirmandoId(p.id)}
+                        >
+                          Eliminar
                         </button>
-                      </>
-                    ) : (
-                      <button type="button" onClick={() => setConfirmandoId(p.id)}>
-                        Eliminar
-                      </button>
-                    ))}
+                      ))}
+                  </div>
                 </td>
               </tr>
             ))}

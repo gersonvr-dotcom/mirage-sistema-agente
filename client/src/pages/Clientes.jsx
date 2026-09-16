@@ -90,21 +90,35 @@ export function Clientes() {
                 <td>{c.telefono ?? '—'}</td>
                 <td>{c.num_proyectos}</td>
                 <td>
-                  <Link to={`/clientes/${c.id}`}>Editar</Link>{' '}
-                  {esAdmin &&
-                    (confirmandoId === c.id ? (
-                      <>
-                        <span>¿Seguro?</span>{' '}
-                        <button onClick={() => handleDelete(c.id)}>Sí, eliminar</button>{' '}
-                        <button type="button" onClick={() => setConfirmandoId(null)}>
-                          No
+                  <div className="row-actions">
+                    <Link to={`/clientes/${c.id}`} className="btn-row-action">
+                      Editar
+                    </Link>
+                    {esAdmin &&
+                      (confirmandoId === c.id ? (
+                        <span className="row-actions-confirm">
+                          ¿Seguro?
+                          <button className="btn-row-action btn-row-action-danger" onClick={() => handleDelete(c.id)}>
+                            Sí, eliminar
+                          </button>
+                          <button
+                            type="button"
+                            className="btn-row-action"
+                            onClick={() => setConfirmandoId(null)}
+                          >
+                            No
+                          </button>
+                        </span>
+                      ) : (
+                        <button
+                          type="button"
+                          className="btn-row-action btn-row-action-danger"
+                          onClick={() => setConfirmandoId(c.id)}
+                        >
+                          Eliminar
                         </button>
-                      </>
-                    ) : (
-                      <button type="button" onClick={() => setConfirmandoId(c.id)}>
-                        Eliminar
-                      </button>
-                    ))}
+                      ))}
+                  </div>
                 </td>
               </tr>
             ))}
