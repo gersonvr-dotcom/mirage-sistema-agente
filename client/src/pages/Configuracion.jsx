@@ -1,5 +1,7 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { api } from '../api';
+
+const POLL_MS = 4000;
 
 export function Configuracion() {
   const [sincronizandoExcel, setSincronizandoExcel] = useState(false);
@@ -9,6 +11,55 @@ export function Configuracion() {
   const [sincronizandoProductos, setSincronizandoProductos] = useState(false);
   const [resultadoProductos, setResultadoProductos] = useState(null);
   const [errorProductos, setErrorProductos] = useState(null);
+  const intervaloRef = useRef(null);
+
+  function detenerPolling() {
+    if (intervaloRef.current) {
+      clearInterval(intervaloRef.current);
+      intervaloRef.current = null;
+    }
+  }
+
+  function aplicarEstadoProductos(estado) {
+    if (estado.estado === 'completado') {
+      detenerPolling();
+      setResultadoProductos(estado.resultado);
+      setSincronizandoProductos(false);
+    } else if (estado.estado === 'error') {
+      detenerPolling();
+      setErrorProductos(estado.error);
+      setSincronizandoProductos(false);
+    } else if (estado.estado === 'corriendo') {
+      setSincronizandoProductos(true);
+    }
+  }
+
+  function iniciarPolling() {
+    detenerPolling();
+    intervaloRef.current = setInterval(async () => {
+      try {
+        const estado = await api.estadoSincronizacionProductos();
+        aplicarEstadoProductos(estado);
+      } catch (err) {
+        detenerPolling();
+        setErrorProductos(err.message);
+        setSincronizandoProductos(false);
+      }
+    }, POLL_MS);
+  }
+
+  useEffect(() => {
+    // Si la app se recargó mientras el sync seguía corriendo, retoma el estado en vez de
+    // perder de vista un job que sigue vivo en el servidor.
+    api
+      .estadoSincronizacionProductos()
+      .then((estado) => {
+        aplicarEstadoProductos(estado);
+        if (estado.estado === 'corriendo') iniciarPolling();
+      })
+      .catch(() => {});
+    return detenerPolling;
+  }, []);
 
   async function sincronizarExcel() {
     setSincronizandoExcel(true);
@@ -25,15 +76,15 @@ export function Configuracion() {
   }
 
   async function sincronizarProductos() {
-    setSincronizandoProductos(true);
     setErrorProductos(null);
     setResultadoProductos(null);
+    setSincronizandoProductos(true);
     try {
-      const data = await api.sincronizarProductosOps();
-      setResultadoProductos(data);
+      const estado = await api.sincronizarProductosOps();
+      aplicarEstadoProductos(estado);
+      if (estado.estado === 'corriendo') iniciarPolling();
     } catch (err) {
       setErrorProductos(err.message);
-    } finally {
       setSincronizandoProductos(false);
     }
   }
