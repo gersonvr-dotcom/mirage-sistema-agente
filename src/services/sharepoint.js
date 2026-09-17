@@ -1,18 +1,18 @@
 import ExcelJS from 'exceljs';
 
-const GRAPH_BASE = 'https://graph.microsoft.com/v1.0';
+export const GRAPH_BASE = 'https://graph.microsoft.com/v1.0';
 const HOJA_COMERCIAL = 'PEDIDOS 2026';
 const CACHE_TTL_MS = 5 * 60 * 1000;
 
 let tokenCache = { value: null, expiresAt: 0 };
 let filasCache = { value: null, expiresAt: 0 };
 
-function encodeSharingUrl(url) {
+export function encodeSharingUrl(url) {
   const base64 = Buffer.from(url, 'utf8').toString('base64');
   return 'u!' + base64.replace(/=+$/, '').replace(/\//g, '_').replace(/\+/g, '-');
 }
 
-async function obtenerAccessToken() {
+export async function obtenerAccessToken() {
   if (tokenCache.value && Date.now() < tokenCache.expiresAt) return tokenCache.value;
 
   const { SHAREPOINT_TENANT_ID, SHAREPOINT_CLIENT_ID, SHAREPOINT_CLIENT_SECRET } = process.env;
@@ -58,6 +58,21 @@ async function descargarExcel() {
     throw new Error(`No se pudo descargar el archivo de SharePoint: ${contentRes.status}`);
   }
   return Buffer.from(await contentRes.arrayBuffer());
+}
+
+export async function graphGet(path, token) {
+  const res = await fetch(`${GRAPH_BASE}${path}`, { headers: { Authorization: `Bearer ${token}` } });
+  const data = await res.json();
+  if (!res.ok) throw new Error(`Graph GET ${path} -> ${JSON.stringify(data)}`);
+  return data;
+}
+
+export async function graphDescargarContenido(driveId, itemId, token) {
+  const res = await fetch(`${GRAPH_BASE}/drives/${driveId}/items/${itemId}/content`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  if (!res.ok) throw new Error(`No se pudo descargar el archivo de SharePoint: ${res.status}`);
+  return Buffer.from(await res.arrayBuffer());
 }
 
 function celdaTexto(valor) {
