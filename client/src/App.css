@@ -502,7 +502,6 @@ td {
   border-radius: 10px;
   font-size: 14px;
   line-height: 145%;
-  white-space: pre-wrap;
 }
 
 .chat-bubble-user {
@@ -510,17 +509,59 @@ td {
   background: var(--accent-bg);
   border: 1px solid var(--accent-border);
   color: var(--text-h);
+  white-space: pre-wrap;
 }
 
 .chat-bubble-model {
   align-self: flex-start;
+  max-width: 92%;
   background: var(--code-bg);
   color: var(--text-h);
+  overflow-x: auto;
 }
 
 .chat-bubble-loading {
   color: var(--text);
   font-style: italic;
+  white-space: pre-wrap;
+}
+
+.chat-bubble-model p {
+  margin: 0 0 8px;
+}
+
+.chat-bubble-model > :last-child {
+  margin-bottom: 0;
+}
+
+.chat-bubble-model ul,
+.chat-bubble-model ol {
+  margin: 0 0 8px;
+  padding-left: 20px;
+}
+
+.chat-bubble-model table {
+  border-collapse: collapse;
+  width: 100%;
+  margin: 4px 0 8px;
+  font-size: 13px;
+}
+
+.chat-bubble-model th,
+.chat-bubble-model td {
+  border: 1px solid var(--border);
+  padding: 6px 10px;
+  text-align: center;
+}
+
+.chat-bubble-model th {
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--text-h);
+  font-weight: 600;
+}
+
+.chat-bubble-model tr:nth-child(even) td {
+  background: rgba(255, 255, 255, 0.03);
 }
 
 .chat-input-row {

@@ -1,4 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 import { api } from '../api';
 
 export function Chat() {
@@ -115,7 +117,11 @@ export function Chat() {
         ) : (
           mensajes.map((m, i) => (
             <div key={i} className={`chat-bubble chat-bubble-${m.role}`}>
-              {m.text}
+              {m.role === 'model' ? (
+                <ReactMarkdown remarkPlugins={[remarkGfm]}>{m.text}</ReactMarkdown>
+              ) : (
+                m.text
+              )}
             </div>
           ))
         )}
