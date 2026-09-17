@@ -11,6 +11,7 @@ import { Proyectos } from './pages/Proyectos';
 import { ProyectoForm } from './pages/ProyectoForm';
 import { ProyectoDetail } from './pages/ProyectoDetail';
 import { Usuarios } from './pages/Usuarios';
+import { Configuracion } from './pages/Configuracion';
 import { Dashboard } from './pages/Dashboard';
 import { Chat } from './pages/Chat';
 import { OPs } from './pages/OPs';
@@ -50,6 +51,14 @@ export default function App() {
               element={
                 <AdminRoute>
                   <Usuarios />
+                </AdminRoute>
+              }
+            />
+            <Route
+              path="/configuracion"
+              element={
+                <AdminRoute>
+                  <Configuracion />
                 </AdminRoute>
               }
             />

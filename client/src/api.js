@@ -84,4 +84,6 @@ export const api = {
   eliminarOPItem: (itemId) => request(`/ops/items/${itemId}`, { method: 'DELETE' }),
   agregarEtapa: (itemId, data) =>
     request(`/ops/items/${itemId}/etapas`, { method: 'POST', body: JSON.stringify(data) }),
+
+  sincronizarExcelMadre: () => request('/config/sincronizar-excel', { method: 'POST' }),
 };

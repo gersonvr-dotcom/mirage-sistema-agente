@@ -55,6 +55,7 @@ export function Sidebar() {
         )}
 
         {esAdmin && link('/usuarios', 'Usuarios', location.pathname.startsWith('/usuarios'))}
+        {esAdmin && link('/configuracion', 'Configuración', location.pathname.startsWith('/configuracion'))}
       </nav>
 
       <div className="sidebar-footer">
