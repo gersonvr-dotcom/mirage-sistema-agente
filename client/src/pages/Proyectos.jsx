@@ -88,15 +88,19 @@ export function Proyectos() {
           <tbody>
             {proyectos.map((p) => (
               <tr key={p.id}>
-                <td>{p.nombre}</td>
-                <td>{p.cliente}</td>
+                <td>
+                  <Link to={`/proyectos/${p.id}`}>{p.nombre}</Link>
+                </td>
+                <td>
+                  <Link to={`/clientes/${p.cliente_id}`}>{p.cliente}</Link>
+                </td>
                 <td>
                   <span className={`badge badge-${p.estado}`}>{p.estado}</span>
                 </td>
                 <td>{new Date(p.created_at).toLocaleDateString()}</td>
                 <td>
                   <div className="row-actions">
-                    <Link to={`/proyectos/${p.id}`} className="btn-row-action">
+                    <Link to={`/proyectos/${p.id}/editar`} className="btn-row-action">
                       Editar
                     </Link>
                     {esAdmin &&

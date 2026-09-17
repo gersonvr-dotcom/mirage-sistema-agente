@@ -42,10 +42,11 @@ export function ClienteForm() {
     try {
       if (editando) {
         await api.actualizarCliente(id, form);
+        navigate(`/clientes/${id}`);
       } else {
         await api.crearCliente(form);
+        navigate('/clientes');
       }
-      navigate('/clientes');
     } catch (err) {
       setError(err.message);
     } finally {
@@ -85,7 +86,7 @@ export function ClienteForm() {
             <button type="submit" disabled={saving}>
               {saving ? 'Guardando…' : 'Guardar'}
             </button>
-            <button type="button" onClick={() => navigate('/clientes')}>
+            <button type="button" onClick={() => navigate(editando ? `/clientes/${id}` : '/clientes')}>
               Cancelar
             </button>
           </div>

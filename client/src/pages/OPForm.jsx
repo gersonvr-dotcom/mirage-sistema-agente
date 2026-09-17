@@ -1,11 +1,13 @@
 import { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { api } from '../api';
 
 export function OPForm() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const proyectoPreseleccionado = searchParams.get('proyecto_id') || '';
   const [proyectos, setProyectos] = useState([]);
-  const [form, setForm] = useState({ numero_op: '', proyecto_id: '', fecha_emision: '' });
+  const [form, setForm] = useState({ numero_op: '', proyecto_id: proyectoPreseleccionado, fecha_emision: '' });
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState(null);
 
@@ -71,7 +73,10 @@ export function OPForm() {
           <button type="submit" disabled={saving}>
             {saving ? 'Creando…' : 'Crear OP'}
           </button>
-          <button type="button" onClick={() => navigate('/ops')}>
+          <button
+            type="button"
+            onClick={() => navigate(proyectoPreseleccionado ? `/proyectos/${proyectoPreseleccionado}` : '/ops')}
+          >
             Cancelar
           </button>
         </div>

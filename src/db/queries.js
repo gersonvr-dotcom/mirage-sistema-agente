@@ -184,8 +184,8 @@ export async function eliminarCliente(id) {
   }
 }
 
-/** Lista de proyectos con el nombre del cliente, filtrable por texto y/o estado. */
-export async function listarProyectos({ q, estado } = {}) {
+/** Lista de proyectos con el nombre del cliente, filtrable por texto, estado y/o cliente. */
+export async function listarProyectos({ q, estado, clienteId } = {}) {
   const where = [];
   const params = [];
 
@@ -197,10 +197,15 @@ export async function listarProyectos({ q, estado } = {}) {
     where.push('p.estado = ?');
     params.push(estado);
   }
+  if (clienteId) {
+    where.push('p.cliente_id = ?');
+    params.push(clienteId);
+  }
 
   const [rows] = await pool.query(
     `SELECT p.id, p.nombre, p.descripcion, p.estado, p.created_at,
-            p.cliente_id, c.nombre AS cliente
+            p.cliente_id, c.nombre AS cliente,
+            (SELECT COUNT(*) FROM ops o WHERE o.proyecto_id = p.id) AS num_ops
        FROM proyectos p
        JOIN clientes c ON c.id = p.cliente_id
       ${where.length ? `WHERE ${where.join(' AND ')}` : ''}

@@ -12,8 +12,8 @@ export const proyectosRouter = Router();
 
 proyectosRouter.get('/', async (req, res) => {
   try {
-    const { q, estado } = req.query;
-    const proyectos = await listarProyectos({ q, estado });
+    const { q, estado, cliente_id } = req.query;
+    const proyectos = await listarProyectos({ q, estado, clienteId: cliente_id });
     res.json({ proyectos });
   } catch (err) {
     console.error(err);

@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { Link, useNavigate, useParams } from 'react-router-dom';
 import { api } from '../api';
 import { useAuth } from '../AuthContext';
 
@@ -160,11 +160,15 @@ export function OPDetail() {
         <div className="op-header-card">
           <div>
             <span className="stat-label">Cliente</span>
-            <p>{op.cliente}</p>
+            <p>
+              <Link to={`/clientes/${op.cliente_id}`}>{op.cliente}</Link>
+            </p>
           </div>
           <div>
             <span className="stat-label">Proyecto</span>
-            <p>{op.proyecto}</p>
+            <p>
+              <Link to={`/proyectos/${op.proyecto_id}`}>{op.proyecto}</Link>
+            </p>
           </div>
           <div>
             <span className="stat-label">Emisión</span>

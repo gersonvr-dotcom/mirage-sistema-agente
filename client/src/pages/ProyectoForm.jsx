@@ -1,16 +1,21 @@
 import { useEffect, useState } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { api } from '../api';
-
-const ESTADO_INICIAL = { cliente_id: '', nombre: '', descripcion: '', estado: 'activo' };
 
 export function ProyectoForm() {
   const { id } = useParams();
   const editando = Boolean(id);
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const clientePreseleccionado = searchParams.get('cliente_id') || '';
 
   const [clientes, setClientes] = useState([]);
-  const [form, setForm] = useState(ESTADO_INICIAL);
+  const [form, setForm] = useState({
+    cliente_id: clientePreseleccionado,
+    nombre: '',
+    descripcion: '',
+    estado: 'activo',
+  });
   const [loading, setLoading] = useState(editando);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState(null);
@@ -46,10 +51,11 @@ export function ProyectoForm() {
     try {
       if (editando) {
         await api.actualizarProyecto(id, form);
+        navigate(`/proyectos/${id}`);
       } else {
-        await api.crearProyecto(form);
+        const { proyecto } = await api.crearProyecto(form);
+        navigate(clientePreseleccionado ? `/clientes/${clientePreseleccionado}` : `/proyectos/${proyecto.id}`);
       }
-      navigate('/proyectos');
     } catch (err) {
       setError(err.message);
     } finally {
@@ -106,7 +112,18 @@ export function ProyectoForm() {
           <button type="submit" disabled={saving}>
             {saving ? 'Guardando…' : 'Guardar'}
           </button>
-          <button type="button" onClick={() => navigate('/proyectos')}>
+          <button
+            type="button"
+            onClick={() =>
+              navigate(
+                editando
+                  ? `/proyectos/${id}`
+                  : clientePreseleccionado
+                    ? `/clientes/${clientePreseleccionado}`
+                    : '/proyectos'
+              )
+            }
+          >
             Cancelar
           </button>
         </div>

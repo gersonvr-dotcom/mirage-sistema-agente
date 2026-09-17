@@ -83,7 +83,9 @@ export function Clientes() {
           <tbody>
             {clientes.map((c) => (
               <tr key={c.id}>
-                <td>{c.nombre}</td>
+                <td>
+                  <Link to={`/clientes/${c.id}`}>{c.nombre}</Link>
+                </td>
                 <td>{c.ruc_nit ?? '—'}</td>
                 <td>{c.contacto ?? '—'}</td>
                 <td>{c.email ?? '—'}</td>
@@ -91,7 +93,7 @@ export function Clientes() {
                 <td>{c.num_proyectos}</td>
                 <td>
                   <div className="row-actions">
-                    <Link to={`/clientes/${c.id}`} className="btn-row-action">
+                    <Link to={`/clientes/${c.id}/editar`} className="btn-row-action">
                       Editar
                     </Link>
                     {esAdmin &&
