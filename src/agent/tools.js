@@ -10,6 +10,7 @@ import {
   actualizarProyecto,
   eliminarProyecto,
 } from '../db/queries.js';
+import { obtenerFilasComerciales } from '../services/sharepoint.js';
 
 const MENSAJE_REQUIERE_CONFIRMACION =
   'Esta acción modifica datos reales y requiere confirmación explícita del usuario. ' +
@@ -91,6 +92,25 @@ export const TOOL_DEFINITIONS = [
     },
   },
   {
+    name: 'consultar_pedidos_comercial',
+    description:
+      'Consulta en vivo el Excel maestro del Departamento Comercial en SharePoint ' +
+      '("EXCEL MADRE 2026.xlsm", hoja "PEDIDOS 2026"): fecha de pedido, número de OP, ' +
+      'cotización, OC del cliente, cliente, proyecto, fecha pactada y observaciones. ' +
+      'Es la fuente de datos del equipo comercial y puede tener filas más nuevas que ' +
+      'la base de datos del sistema. Filtra opcionalmente por texto (coincidencia parcial ' +
+      'en OP, cotización, cliente o proyecto); sin filtro devuelve solo un conteo total.',
+    parametersJsonSchema: {
+      type: 'object',
+      properties: {
+        q: {
+          type: 'string',
+          description: 'Texto a buscar (parcial) en OP, cotización, cliente o proyecto.',
+        },
+      },
+    },
+  },
+  {
     name: 'crear_proyecto',
     description:
       'Crea un nuevo proyecto para un cliente. Acción sensible: la primera llamada debe ir con ' +
@@ -166,6 +186,8 @@ export async function ejecutarTool(name, input) {
       return materialPendiente({ cliente: input.cliente, proyecto: input.proyecto });
     case 'estado_proyecto':
       return estadoProyecto(input.proyecto);
+    case 'consultar_pedidos_comercial':
+      return consultarPedidosComercial(input.q);
     case 'crear_proyecto':
       return crearProyectoPorNombre(input);
     case 'editar_proyecto':
@@ -175,6 +197,30 @@ export async function ejecutarTool(name, input) {
     default:
       throw new Error(`Tool desconocida: ${name}`);
   }
+}
+
+const LIMITE_FILAS_COMERCIAL = 25;
+
+async function consultarPedidosComercial(q) {
+  const filas = await obtenerFilasComerciales();
+
+  if (!q) {
+    return {
+      total_filas: filas.length,
+      mensaje: `Hay ${filas.length} pedidos en el Excel comercial. Indica un término de búsqueda (OP, cotización, cliente o proyecto) para ver el detalle.`,
+    };
+  }
+
+  const qLower = q.toLowerCase();
+  const coincidencias = filas.filter((f) =>
+    [f.op, f.cotizacion, f.cliente, f.proyecto].some((v) => v && v.toLowerCase().includes(qLower))
+  );
+
+  return {
+    total_coincidencias: coincidencias.length,
+    filas: coincidencias.slice(0, LIMITE_FILAS_COMERCIAL),
+    truncado: coincidencias.length > LIMITE_FILAS_COMERCIAL,
+  };
 }
 
 async function crearProyectoPorNombre({ cliente, nombre, descripcion, confirmado }) {
