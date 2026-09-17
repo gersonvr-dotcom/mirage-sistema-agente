@@ -92,6 +92,22 @@ export const TOOL_DEFINITIONS = [
     },
   },
   {
+    name: 'ranking_clientes_por_proyectos',
+    description:
+      'Devuelve los clientes con más proyectos registrados, ordenados de mayor a menor ' +
+      'cantidad. Úsala para preguntas de "top N clientes" o "qué clientes tienen más ' +
+      'proyectos", en vez de decir que no es posible calcularlo.',
+    parametersJsonSchema: {
+      type: 'object',
+      properties: {
+        limite: {
+          type: 'integer',
+          description: 'Cantidad de clientes a devolver (por defecto 5, máximo 50).',
+        },
+      },
+    },
+  },
+  {
     name: 'consultar_pedidos_comercial',
     description:
       'Consulta en vivo el Excel maestro del Departamento Comercial en SharePoint ' +
@@ -186,6 +202,8 @@ export async function ejecutarTool(name, input) {
       return materialPendiente({ cliente: input.cliente, proyecto: input.proyecto });
     case 'estado_proyecto':
       return estadoProyecto(input.proyecto);
+    case 'ranking_clientes_por_proyectos':
+      return rankingClientesPorProyectos(input.limite);
     case 'consultar_pedidos_comercial':
       return consultarPedidosComercial(input.q);
     case 'crear_proyecto':
@@ -197,6 +215,15 @@ export async function ejecutarTool(name, input) {
     default:
       throw new Error(`Tool desconocida: ${name}`);
   }
+}
+
+async function rankingClientesPorProyectos(limite) {
+  const clientes = await listarClientes({});
+  const n = Math.min(Math.max(Number(limite) || 5, 1), 50);
+  const ordenados = [...clientes].sort((a, b) => b.num_proyectos - a.num_proyectos).slice(0, n);
+  return {
+    ranking: ordenados.map((c) => ({ cliente: c.nombre, num_proyectos: c.num_proyectos })),
+  };
 }
 
 const LIMITE_FILAS_COMERCIAL = 25;
