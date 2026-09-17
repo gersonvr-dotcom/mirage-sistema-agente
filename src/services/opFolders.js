@@ -95,12 +95,16 @@ export async function obtenerCotizacionYLineas(carpeta) {
 
       const lineaCatalogo = celdaTexto(row.getCell(3).value);
       const codColor = celdaTexto(row.getCell(6).value);
+      const acabado = celdaTexto(row.getCell(7).value);
       const formato = celdaTexto(row.getCell(8).value);
+      const cajas = celdaNumero(row.getCell(10).value);
+      const m2xCaja = celdaNumero(row.getCell(11).value);
       const total = celdaNumero(row.getCell(12).value);
       const unidadMedida = celdaTexto(row.getCell(13).value);
+      const notas = celdaTexto(row.getCell(14).value);
 
       if (!lineaCatalogo || total === null) continue;
-      lineas.push({ lineaCatalogo, codColor, formato, unidadMedida, total });
+      lineas.push({ lineaCatalogo, codColor, acabado, formato, cajas, m2xCaja, total, unidadMedida, notas });
     }
   }
 

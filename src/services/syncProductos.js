@@ -24,6 +24,7 @@ export async function sincronizarProductosDesdeCarpetas() {
   const stats = {
     carpetas_total: carpetas.length,
     ops_con_productos_nuevos: 0,
+    ops_migradas_a_detalle_completo: 0,
     ops_ya_tenian_productos: 0,
     ops_no_encontradas: 0,
     carpetas_sin_archivo_op: 0,
@@ -76,7 +77,30 @@ export async function sincronizarProductosDesdeCarpetas() {
           await conn.query('UPDATE ops SET cotizacion_id = ? WHERE id = ?', [cotizacionId, op.id]);
         }
 
-        if (op.num_items > 0) {
+        let numItems = op.num_items;
+        let migrada = false;
+        if (numItems > 0) {
+          const [items] = await conn.query('SELECT id, acabado FROM op_items WHERE op_id = ?', [op.id]);
+          const esDetalleViejo = items.every((i) => i.acabado === null);
+          let tieneSeguimiento = false;
+          if (esDetalleViejo && items.length > 0) {
+            const [[{ total }]] = await conn.query(
+              `SELECT COUNT(*) AS total FROM seguimiento_etapas WHERE op_item_id IN (${items.map(() => '?').join(',')})`,
+              items.map((i) => i.id)
+            );
+            tieneSeguimiento = total > 0;
+          }
+          if (esDetalleViejo && !tieneSeguimiento) {
+            // Líneas de una sincronización anterior a que existieran estos campos, y sin
+            // seguimiento de producción registrado todavía: es seguro reemplazarlas por la
+            // versión completa en vez de dejarlas con acabado/cajas/notas vacíos para siempre.
+            await conn.query('DELETE FROM op_items WHERE op_id = ?', [op.id]);
+            numItems = 0;
+            migrada = true;
+          }
+        }
+
+        if (numItems > 0) {
           stats.ops_ya_tenian_productos++;
         } else if (datos.lineas.length > 0) {
           for (const linea of datos.lineas) {
@@ -95,12 +119,22 @@ export async function sincronizarProductosDesdeCarpetas() {
             }
 
             await conn.query(
-              `INSERT INTO op_items (op_id, producto_id, cantidad, estado) VALUES (?, ?, ?, 'pendiente')`,
-              [op.id, productoId, linea.total]
+              `INSERT INTO op_items (op_id, producto_id, acabado, cajas, m2_x_caja, cantidad, notas, estado)
+               VALUES (?, ?, ?, ?, ?, ?, ?, 'pendiente')`,
+              [
+                op.id,
+                productoId,
+                normTexto(linea.acabado) || null,
+                linea.cajas,
+                linea.m2xCaja,
+                linea.total,
+                normTexto(linea.notas) || null,
+              ]
             );
             stats.lineas_insertadas++;
           }
-          stats.ops_con_productos_nuevos++;
+          if (migrada) stats.ops_migradas_a_detalle_completo++;
+          else stats.ops_con_productos_nuevos++;
         }
 
         await conn.commit();

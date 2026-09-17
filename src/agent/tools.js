@@ -38,7 +38,7 @@ async function resolverUno(candidatos, tipo, nombreBuscado) {
 export const TOOL_DEFINITIONS = [
   {
     name: 'consultar_op',
-    description: 'Busca una Orden de Producción (OP) por su número y devuelve cliente, proyecto y cada línea (producto, código, formato, cantidad, proveedor, fecha estimada, estado).',
+    description: 'Busca una Orden de Producción (OP) por su número y devuelve cliente, proyecto y cada línea de producto (código, línea de catálogo, formato, acabado, cajas, m2 por caja, cantidad total, unidad de medida, notas, proveedor, fecha estimada, estado).',
     parametersJsonSchema: {
       type: 'object',
       properties: {

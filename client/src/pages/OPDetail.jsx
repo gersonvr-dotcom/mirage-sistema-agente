@@ -329,8 +329,12 @@ export function OPDetail() {
                 </span>
               </div>
               <p className="chat-empty">
-                Cantidad: {item.cantidad} · Proveedor: {item.proveedor ?? '—'} · Entrega estimada:{' '}
+                Cantidad: {item.cantidad} {item.unidad_medida} · Proveedor: {item.proveedor ?? '—'} · Entrega estimada:{' '}
                 {item.fecha_estimada_entrega ? new Date(item.fecha_estimada_entrega).toLocaleDateString() : '—'}
+              </p>
+              <p className="chat-empty">
+                Acabado: {item.acabado ?? '—'} · Cajas: {item.cajas ?? '—'} · M2 x caja: {item.m2_x_caja ?? '—'}
+                {item.notas ? ` · Notas: ${item.notas}` : ''}
               </p>
 
               {item.historial.length > 0 && (

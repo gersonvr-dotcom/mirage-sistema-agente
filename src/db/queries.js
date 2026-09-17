@@ -46,8 +46,9 @@ export async function buscarPorOP(numeroOp) {
   const [rows] = await pool.query(
     `SELECT o.numero_op, o.fecha_emision, o.estado_general,
             c.nombre AS cliente, p.nombre AS proyecto,
-            pr.codigo, pr.nombre AS producto, pr.formato,
-            oi.cantidad, oi.fecha_estimada_entrega, oi.estado AS estado_item,
+            pr.codigo, pr.nombre AS producto, pr.formato, pr.unidad_medida,
+            oi.acabado, oi.cajas, oi.m2_x_caja, oi.cantidad, oi.notas,
+            oi.fecha_estimada_entrega, oi.estado AS estado_item,
             prov.nombre AS proveedor
        FROM ops o
        JOIN clientes c ON c.id = o.cliente_id
@@ -82,8 +83,9 @@ export async function buscarPorProducto(codigoONombre) {
   const like = `%${codigoONombre}%`;
   const [rows] = await pool.query(
     `SELECT o.numero_op, c.nombre AS cliente, p.nombre AS proyecto,
-            pr.codigo, pr.nombre AS producto,
-            oi.cantidad, oi.estado AS estado_item, oi.fecha_estimada_entrega
+            pr.codigo, pr.nombre AS producto, pr.formato, pr.unidad_medida,
+            oi.acabado, oi.cajas, oi.m2_x_caja, oi.cantidad, oi.notas,
+            oi.estado AS estado_item, oi.fecha_estimada_entrega
        FROM op_items oi
        JOIN ops o ON o.id = oi.op_id
        JOIN clientes c ON c.id = o.cliente_id
@@ -390,7 +392,8 @@ export async function estadoProyecto(nombreProyecto) {
 
   for (const op of ops) {
     const [items] = await pool.query(
-      `SELECT oi.id, pr.codigo, pr.nombre AS producto, oi.cantidad,
+      `SELECT oi.id, pr.codigo, pr.nombre AS producto, pr.formato, pr.unidad_medida,
+              oi.acabado, oi.cajas, oi.m2_x_caja, oi.cantidad, oi.notas,
               oi.fecha_estimada_entrega, oi.estado AS estado_item,
               prov.nombre AS proveedor,
               (oi.fecha_estimada_entrega < CURDATE()
@@ -491,9 +494,10 @@ export async function obtenerOP(id) {
   if (!op) return null;
 
   const [items] = await pool.query(
-    `SELECT oi.id, oi.producto_id, pr.codigo, pr.nombre AS producto, pr.formato,
+    `SELECT oi.id, oi.producto_id, pr.codigo, pr.nombre AS producto, pr.formato, pr.unidad_medida,
             oi.proveedor_id, prov.nombre AS proveedor,
-            oi.cantidad, oi.fecha_estimada_entrega, oi.estado,
+            oi.acabado, oi.cajas, oi.m2_x_caja, oi.cantidad, oi.notas,
+            oi.fecha_estimada_entrega, oi.estado,
             (oi.fecha_estimada_entrega < CURDATE()
               AND oi.estado NOT IN ('en_bodega', 'entregado', 'cancelado')) AS atrasado
        FROM op_items oi
