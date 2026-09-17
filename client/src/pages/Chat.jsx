@@ -36,6 +36,21 @@ export function Chat() {
     finRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [mensajes]);
 
+  async function nuevoChat() {
+    if (enviando) return;
+    setError(null);
+    try {
+      const data = await api.nuevaConversacionAgente();
+      setMensajes(data.mensajes);
+      setUsage(data.usage);
+      setTexto('');
+      setLimitReached(false);
+      limiteProviderRef.current = null;
+    } catch (err) {
+      setError(err.message);
+    }
+  }
+
   async function enviar(e) {
     e.preventDefault();
     const mensaje = texto.trim();
@@ -64,10 +79,14 @@ export function Chat() {
 
   return (
     <div className="page chat-page">
-      <h1>Chat del agente</h1>
+      <h1>LUVENA Agente IA</h1>
 
       <div className="chat-meta">
+        <button type="button" className="btn-row-action" onClick={nuevoChat} disabled={enviando}>
+          + Nuevo chat
+        </button>
         <select
+          className="btn-row-action"
           value={provider}
           onChange={(e) => {
             setProvider(e.target.value);

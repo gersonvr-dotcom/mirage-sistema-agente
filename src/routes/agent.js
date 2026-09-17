@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { runAgentChat } from '../agent/chat.js';
-import { obtenerConversacion, listarAccionesAgente } from '../db/queries.js';
+import { obtenerConversacion, reiniciarConversacion, listarAccionesAgente } from '../db/queries.js';
 import { normalizarHistorial } from '../agent/normalizarHistorial.js';
 import { normalizarErrorAgente } from '../agent/errors.js';
 
@@ -26,6 +26,16 @@ agentRouter.get('/conversacion', async (req, res) => {
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'No se pudo cargar la conversación.', detail: err.message });
+  }
+});
+
+agentRouter.post('/conversacion/nueva', async (req, res) => {
+  try {
+    await reiniciarConversacion(req.user.sub);
+    res.json({ provider: null, mensajes: [], usage: { tokensInput: 0, tokensOutput: 0, limit: LIMITE_TOKENS } });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'No se pudo iniciar una conversación nueva.', detail: err.message });
   }
 });
 

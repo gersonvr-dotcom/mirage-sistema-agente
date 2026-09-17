@@ -29,7 +29,7 @@ export function Sidebar() {
       </div>
 
       <nav className="sidebar-nav">
-        {link('/chat', 'Chat', location.pathname.startsWith('/chat'))}
+        {link('/chat', 'LUVENA Agente IA', location.pathname.startsWith('/chat'))}
         {link('/dashboard', 'Dashboard', location.pathname.startsWith('/dashboard'))}
 
         <div className={`sidebar-link sidebar-group${enClientes ? ' sidebar-link-active' : ''}`}>

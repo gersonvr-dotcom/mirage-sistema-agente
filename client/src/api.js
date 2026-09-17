@@ -47,6 +47,7 @@ export const api = {
   metricas: () => request('/dashboard'),
 
   conversacionAgente: () => request('/agent/conversacion'),
+  nuevaConversacionAgente: () => request('/agent/conversacion/nueva', { method: 'POST' }),
   auditoriaAgente: () => request('/agent/auditoria'),
   chatAgente: (message, provider) =>
     request('/agent/chat', { method: 'POST', body: JSON.stringify({ message, provider }) }),

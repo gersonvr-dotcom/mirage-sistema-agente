@@ -279,6 +279,19 @@ export async function obtenerConversacion(usuarioId) {
   };
 }
 
+/**
+ * Reinicia la conversación del agente de un usuario a un estado limpio (sin historial ni
+ * consumo de tokens). Actualiza la fila en vez de borrarla para no romper la auditoría de
+ * agente_acciones, que referencia conversacion_id.
+ */
+export async function reiniciarConversacion(usuarioId) {
+  const [result] = await pool.query(
+    `UPDATE conversaciones_agente SET historial = NULL, tokens_input = 0, tokens_output = 0 WHERE usuario_id = ?`,
+    [usuarioId]
+  );
+  return result.affectedRows > 0;
+}
+
 /** Crea o actualiza la conversación del agente de un usuario (upsert por usuario_id). */
 export async function guardarConversacion({ usuarioId, provider, historial, tokensInput, tokensOutput }) {
   const [result] = await pool.query(
