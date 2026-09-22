@@ -11,8 +11,11 @@ export function Sidebar() {
   const enClientes = location.pathname.startsWith('/clientes');
   const enProyectos = location.pathname.startsWith('/proyectos');
   const enOps = location.pathname.startsWith('/ops');
+  const enConfiguracion = location.pathname.startsWith('/configuracion');
+  const enUsuarios = location.pathname.startsWith('/usuarios');
 
   const [abierto, setAbierto] = useState(enClientes || enProyectos || enOps);
+  const [abiertoConfig, setAbiertoConfig] = useState(enConfiguracion || enUsuarios);
 
   function link(to, label, activo) {
     return (
@@ -54,8 +57,26 @@ export function Sidebar() {
           </div>
         )}
 
-        {esAdmin && link('/usuarios', 'Usuarios', location.pathname.startsWith('/usuarios'))}
-        {esAdmin && link('/configuracion', 'Configuración', location.pathname.startsWith('/configuracion'))}
+        {esAdmin && (
+          <>
+            <div className={`sidebar-link sidebar-group${enConfiguracion ? ' sidebar-link-active' : ''}`}>
+              <Link to="/configuracion" className="sidebar-group-label">
+                Configuración
+              </Link>
+              <button
+                type="button"
+                className="sidebar-caret"
+                onClick={() => setAbiertoConfig((v) => !v)}
+                aria-label="Mostrar usuarios"
+                aria-expanded={abiertoConfig}
+              >
+                {abiertoConfig ? '▼' : '▶'}
+              </button>
+            </div>
+
+            {abiertoConfig && <div className="sidebar-sub">{link('/usuarios', 'Usuarios', enUsuarios)}</div>}
+          </>
+        )}
       </nav>
 
       <div className="sidebar-footer">
