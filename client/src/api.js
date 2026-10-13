@@ -45,6 +45,7 @@ export const api = {
   crearUsuario: (data) => request('/usuarios', { method: 'POST', body: JSON.stringify(data) }),
 
   metricas: () => request('/dashboard'),
+  rankingM2: (params = {}) => request(`/analitica/ranking-m2?${new URLSearchParams(params)}`),
 
   conversacionAgente: () => request('/agent/conversacion'),
   nuevaConversacionAgente: () => request('/agent/conversacion/nueva', { method: 'POST' }),

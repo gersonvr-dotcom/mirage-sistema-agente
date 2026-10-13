@@ -74,11 +74,23 @@ async function resolverObra(conn, clienteId, norma, stats, proyectosPorCliente) 
 }
 
 /**
+ * ¿La observación comercial dice que la OP fue anulada? Se compara cada fragmento completo (las observaciones
+ * se unen con " | ") contra ANULADO/ANULADA, para no marcar como cancelada una nota que solo contiene la palabra.
+ */
+export function esOpAnulada(observaciones) {
+  return String(observaciones ?? '')
+    .split('|')
+    .some((parte) => /^ANULAD[OA]$/i.test(parte.trim()));
+}
+
+/**
  * Trae en vivo el Excel Madre 2026 desde SharePoint y sincroniza clientes, proyectos,
  * cotizaciones y OPs contra la base de datos: crea lo que no existe y actualiza (por
  * numero_op) lo que ya existía, para reflejar ediciones hechas en el Excel después de la
- * primera importación. Nunca toca `estado_general` de una OP existente, ya que ese campo
- * lo gestiona el flujo de producción dentro del sistema, no el Excel comercial.
+ * primera importación. No toca `estado_general` de una OP existente, ya que ese campo lo
+ * gestiona el flujo de producción dentro del sistema, con una sola excepción: si el Excel comercial dice
+ * ANULADO la OP pasa a 'cancelada' (para que no cuente en rankings ni métricas). Nunca se revierte: si más
+ * tarde se quita la nota, la cancelación se queda y se corrige a mano.
  */
 export async function sincronizarDesdeExcelMadre() {
   const filas = await obtenerFilasComerciales({ forzarRecarga: true });
@@ -94,6 +106,7 @@ export async function sincronizarDesdeExcelMadre() {
     ops_creadas: 0,
     ops_actualizadas: 0,
     ops_reasignadas_a_obra: 0,
+    ops_marcadas_canceladas: 0,
     errores: [],
   };
 
@@ -160,25 +173,29 @@ export async function sincronizarDesdeExcelMadre() {
         const { fechaPactada, observaciones } = normFechaPactada(r.fecha_pactada, normObservaciones(r.observaciones));
         const ocCliente = normOc(r.oc);
 
-        const [opExistente] = await conn.query('SELECT id, proyecto_id FROM ops WHERE numero_op = ?', [r.op]);
+        const anulada = esOpAnulada(observaciones);
+        const [opExistente] = await conn.query('SELECT id, proyecto_id, estado_general FROM ops WHERE numero_op = ?', [r.op]);
         if (opExistente.length) {
           await conn.query(
             `UPDATE ops
                 SET cotizacion_id = ?, proyecto_id = ?, cliente_id = ?, tipo_pedido = ?, descripcion_pedido = ?,
-                    fecha_emision = ?, fecha_pactada = ?, oc_cliente = ?, observaciones_comercial = ?
+                    fecha_emision = ?, fecha_pactada = ?, oc_cliente = ?, observaciones_comercial = ?,
+                    estado_general = IF(?, 'cancelada', estado_general)
               WHERE id = ?`,
-            [cotizacionId, proyectoId, clienteId, tipoPedido, descripcionPedido, r.fecha_pedido, fechaPactada, ocCliente, observaciones, opExistente[0].id]
+            [cotizacionId, proyectoId, clienteId, tipoPedido, descripcionPedido, r.fecha_pedido, fechaPactada, ocCliente, observaciones, anulada, opExistente[0].id]
           );
           stats.ops_actualizadas++;
+          if (anulada && opExistente[0].estado_general !== 'cancelada') stats.ops_marcadas_canceladas++;
           if (opExistente[0].proyecto_id !== proyectoId) stats.ops_reasignadas_a_obra++;
         } else {
           await conn.query(
             `INSERT INTO ops
                (numero_op, cotizacion_id, proyecto_id, cliente_id, tipo_pedido, descripcion_pedido, fecha_emision, fecha_pactada, oc_cliente, observaciones_comercial, estado_general)
-             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'abierta')`,
-            [r.op, cotizacionId, proyectoId, clienteId, tipoPedido, descripcionPedido, r.fecha_pedido, fechaPactada, ocCliente, observaciones]
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+            [r.op, cotizacionId, proyectoId, clienteId, tipoPedido, descripcionPedido, r.fecha_pedido, fechaPactada, ocCliente, observaciones, anulada ? 'cancelada' : 'abierta']
           );
           stats.ops_creadas++;
+          if (anulada) stats.ops_marcadas_canceladas++;
         }
 
         await conn.commit();

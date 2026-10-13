@@ -58,6 +58,62 @@ function resumenAccion(accion) {
   return `${verbo} el proyecto "${nombre}"`;
 }
 
+const formatoM2 = new Intl.NumberFormat('es', { maximumFractionDigits: 2, useGrouping: 'always' });
+
+function TopM2({ anio }) {
+  const [datos, setDatos] = useState(null);
+  const [error, setError] = useState(null);
+
+  useEffect(() => {
+    api
+      .rankingM2({ anio, limite: 5 })
+      .then(setDatos)
+      .catch((err) => setError(err.message));
+  }, [anio]);
+
+  return (
+    <section className="bar-list" style={{ marginTop: 28 }}>
+      <h2>Top 5 clientes por m² ({anio})</h2>
+      {error && <p className="error">{error}</p>}
+      {datos && datos.ranking.length === 0 && <p className="chat-empty">Todavía no hay ventas en m² registradas en {anio}.</p>}
+      {datos && datos.ranking.length > 0 && (
+        <>
+          <div className="table-scroll">
+            <table>
+              <thead>
+                <tr>
+                  <th>#</th>
+                  <th>Cliente</th>
+                  <th>m²</th>
+                  <th>OPs</th>
+                  <th>Proyectos</th>
+                </tr>
+              </thead>
+              <tbody>
+                {datos.ranking.map((r) => (
+                  <tr key={r.cliente}>
+                    <td>{r.posicion}</td>
+                    <td>{r.cliente}</td>
+                    <td>{formatoM2.format(r.m2_total)}</td>
+                    <td>{r.num_ops}</td>
+                    <td>{r.num_proyectos}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          <p className="chat-empty">
+            Total {anio}: {formatoM2.format(datos.m2_total_general)} m² en {datos.total_clientes} clientes. {datos.criterio}
+          </p>
+          {datos.advertencias?.map((a) => (
+            <p className="error" key={a}>{a}</p>
+          ))}
+        </>
+      )}
+    </section>
+  );
+}
+
 export function Dashboard() {
   const [metricas, setMetricas] = useState(null);
   const [auditoria, setAuditoria] = useState([]);
@@ -124,6 +180,8 @@ export function Dashboard() {
               claseFill={(clave) => (TERMINALES.has(clave) ? 'estado-terminal' : 'estado-pipeline')}
             />
           </div>
+
+          <TopM2 anio={new Date().getFullYear()} />
 
           <section className="bar-list" style={{ marginTop: 28 }}>
             <h2>Últimas acciones del agente</h2>

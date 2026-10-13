@@ -14,6 +14,7 @@ import { opsRouter } from './src/routes/ops.js';
 import { productosRouter } from './src/routes/productos.js';
 import { proveedoresRouter } from './src/routes/proveedores.js';
 import { configRouter } from './src/routes/config.js';
+import { analiticaRouter } from './src/routes/analitica.js';
 import { requireAuth } from './src/middleware/requireAuth.js';
 import { requireRole } from './src/middleware/requireRole.js';
 
@@ -34,6 +35,7 @@ app.use('/api/proyectos', requireAuth, proyectosRouter);
 app.use('/api/clientes', requireAuth, clientesRouter);
 app.use('/api/usuarios', requireAuth, requireRole('administrador'), usuariosRouter);
 app.use('/api/dashboard', requireAuth, dashboardRouter);
+app.use('/api/analitica', requireAuth, analiticaRouter);
 app.use('/api/ops', requireAuth, opsRouter);
 app.use('/api/productos', requireAuth, productosRouter);
 app.use('/api/proveedores', requireAuth, proveedoresRouter);

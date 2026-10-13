@@ -14,6 +14,8 @@ import {
   historialPreciosProducto,
 } from '../db/queries.js';
 import { obtenerFilasComerciales } from '../services/sharepoint.js';
+import { rankingClientesPorM2, volumenTotalVendido, AGRUPACIONES_VALIDAS, METRICAS_VALIDAS } from '../db/analitica.js';
+import { TIPOS_CLIENTE } from '../db/clienteTipos.js';
 import { puedeVerPrecios, sinCamposDePrecio } from '../services/permisosPrecios.js';
 
 export { puedeVerPrecios, sinCamposDePrecio };
@@ -107,7 +109,9 @@ export const TOOL_DEFINITIONS = [
     description:
       'Devuelve los clientes con más proyectos registrados, ordenados de mayor a menor ' +
       'cantidad. Úsala para preguntas de "top N clientes" o "qué clientes tienen más ' +
-      'proyectos", en vez de decir que no es posible calcularlo.',
+      'proyectos", en vez de decir que no es posible calcularlo. Cada proyecto es una OBRA: los pedidos ' +
+      'adicionales, de perfiles o de enchape de una misma obra cuentan dentro de ella y no como proyectos nuevos. ' +
+      'Excluye clientes internos. Para ranking por metros cuadrados usa ranking_clientes_por_m2.',
     parametersJsonSchema: {
       type: 'object',
       properties: {
@@ -135,6 +139,43 @@ export const TOOL_DEFINITIONS = [
           description: 'Texto a buscar (parcial) en OP, cotización, cliente o proyecto.',
         },
       },
+    },
+  },
+  {
+    name: 'ranking_clientes_por_m2',
+    description:
+      'Ranking de clientes por metros cuadrados (m²) comprados, de mayor a menor. Úsala para preguntas como ' +
+      '"¿qué constructora compró más m² en 2026?". Criterio: solo líneas en M2 (ML, piezas y mapas no se suman como m²), ' +
+      'por fecha de emisión de la OP, incluye ventas de stock y excluye OPs anuladas y clientes internos. ' +
+      'Devuelve m² totales, número de OPs y de proyectos (obras) por cliente. Menciona siempre el criterio en la respuesta. ' +
+      'Si los clientes no tienen tipo asignado, el filtro por tipo devuelve vacío: dilo en vez de inventar.',
+    parametersJsonSchema: {
+      type: 'object',
+      properties: {
+        anio: { type: 'integer', description: 'Año de emisión de la OP, por ejemplo 2026. Sin él cuenta todos los años.' },
+        cliente_tipo: { type: 'string', enum: TIPOS_CLIENTE, description: 'Opcional: limitar a un tipo de cliente.' },
+        limite: { type: 'integer', description: 'Cuántos clientes devolver (por defecto 10, máximo 100).' },
+      },
+    },
+  },
+  {
+    name: 'volumen_total_vendido',
+    description:
+      'Volumen vendido en un período, agrupado por cliente, proyecto, mes, línea de catálogo, formato, proveedor o tipo de cliente, ' +
+      'en m² (metrica "m2", disponible para todos) o en importe (metrica "importe", SOLO ADMINISTRADORES; devuelve un bloque por moneda, ' +
+      'neto de IVA y con descuento, y nunca mezcla monedas). Mismo criterio que ranking_clientes_por_m2. ' +
+      'Devuelve las primeras filas (por defecto 20) más el total general; los meses van en orden cronológico. ' +
+      'Respeta las advertencias del resultado (por ejemplo OPs con fecha inválida) y menciona el criterio.',
+    parametersJsonSchema: {
+      type: 'object',
+      properties: {
+        fecha_inicio: { type: 'string', description: 'Fecha de emisión mínima, AAAA-MM-DD.' },
+        fecha_fin: { type: 'string', description: 'Fecha de emisión máxima, AAAA-MM-DD.' },
+        agrupado_por: { type: 'string', enum: AGRUPACIONES_VALIDAS, description: 'Cómo agrupar el volumen.' },
+        metrica: { type: 'string', enum: METRICAS_VALIDAS, description: '"m2" (por defecto) o "importe" (solo administradores).' },
+        limite: { type: 'integer', description: 'Cuántos grupos devolver (por defecto 20, máximo 100).' },
+      },
+      required: ['agrupado_por'],
     },
   },
   {
@@ -233,6 +274,17 @@ export async function ejecutarTool(name, input, ctx = {}) {
     }
     case 'consultar_precios_cotizacion':
       return puedeVerPrecios(ctx) ? consultarPreciosCotizacion(input) : SIN_PERMISO_PRECIOS;
+    case 'ranking_clientes_por_m2':
+      return rankingClientesPorM2({ anio: input.anio, clienteTipo: input.cliente_tipo, limite: input.limite });
+    case 'volumen_total_vendido':
+      if (input.metrica === 'importe' && !puedeVerPrecios(ctx)) return SIN_PERMISO_PRECIOS;
+      return volumenTotalVendido({
+        fechaInicio: input.fecha_inicio,
+        fechaFin: input.fecha_fin,
+        agruparPor: input.agrupado_por,
+        metrica: input.metrica,
+        limite: input.limite,
+      });
     case 'historial_precios_producto':
       return puedeVerPrecios(ctx) ? historialPreciosProducto(input) : SIN_PERMISO_PRECIOS;
     case 'consultar_cliente':
@@ -278,7 +330,10 @@ async function consultarPreciosCotizacion({ numero_cotizacion, cliente, proyecto
 async function rankingClientesPorProyectos(limite) {
   const clientes = await listarClientes({});
   const n = Math.min(Math.max(Number(limite) || 5, 1), 50);
-  const ordenados = [...clientes].sort((a, b) => b.num_proyectos - a.num_proyectos).slice(0, n);
+  const ordenados = clientes
+    .filter((c) => c.tipo !== 'interno')
+    .sort((a, b) => b.num_proyectos - a.num_proyectos || a.nombre.localeCompare(b.nombre))
+    .slice(0, n);
   return {
     ranking: ordenados.map((c) => ({ cliente: c.nombre, num_proyectos: c.num_proyectos })),
   };

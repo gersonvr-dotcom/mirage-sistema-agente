@@ -85,6 +85,10 @@ export function Configuracion() {
               <span className="stat-label">OPs reasignadas a su obra</span>
               <span className="stat-value">{resultadoExcel.ops_reasignadas_a_obra}</span>
             </div>
+            <div className="stat-tile">
+              <span className="stat-label">OPs marcadas como canceladas (ANULADO)</span>
+              <span className="stat-value">{resultadoExcel.ops_marcadas_canceladas}</span>
+            </div>
           </div>
 
           {resultadoExcel.errores.length > 0 && (
