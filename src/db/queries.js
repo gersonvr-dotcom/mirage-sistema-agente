@@ -476,6 +476,7 @@ export async function listarOPs({ q, estado, clienteId, proyectoId } = {}) {
 
   const [rows] = await pool.query(
     `SELECT o.id, o.numero_op, o.fecha_emision, o.estado_general, o.created_at,
+            o.tipo_pedido, o.descripcion_pedido,
             o.cliente_id, c.nombre AS cliente,
             o.proyecto_id, p.nombre AS proyecto,
             o.pedido_id,
@@ -494,6 +495,7 @@ export async function listarOPs({ q, estado, clienteId, proyectoId } = {}) {
 export async function obtenerOP(id) {
   const [[op]] = await pool.query(
     `SELECT o.id, o.numero_op, o.fecha_emision, o.estado_general, o.pedido_id,
+            o.tipo_pedido, o.descripcion_pedido,
             o.cliente_id, c.nombre AS cliente,
             o.proyecto_id, p.nombre AS proyecto
        FROM ops o
@@ -534,7 +536,7 @@ export async function obtenerOP(id) {
 }
 
 /** Crea una OP. El cliente se deriva del proyecto elegido (evita inconsistencias). */
-export async function crearOP({ numero_op, proyecto_id, pedido_id, fecha_emision }) {
+export async function crearOP({ numero_op, proyecto_id, pedido_id, fecha_emision, tipo_pedido, descripcion_pedido }) {
   const [[proyecto]] = await pool.query(`SELECT cliente_id FROM proyectos WHERE id = ?`, [proyecto_id]);
   if (!proyecto) {
     const e = new Error('El proyecto indicado no existe.');
@@ -543,9 +545,9 @@ export async function crearOP({ numero_op, proyecto_id, pedido_id, fecha_emision
   }
   try {
     const [result] = await pool.query(
-      `INSERT INTO ops (numero_op, proyecto_id, cliente_id, pedido_id, fecha_emision)
-       VALUES (?, ?, ?, ?, ?)`,
-      [numero_op, proyecto_id, proyecto.cliente_id, pedido_id || null, fecha_emision]
+      `INSERT INTO ops (numero_op, proyecto_id, cliente_id, pedido_id, fecha_emision, tipo_pedido, descripcion_pedido)
+       VALUES (?, ?, ?, ?, ?, ?, ?)`,
+      [numero_op, proyecto_id, proyecto.cliente_id, pedido_id || null, fecha_emision, tipo_pedido || 'principal', descripcion_pedido?.trim() || null]
     );
     return obtenerOP(result.insertId);
   } catch (err) {

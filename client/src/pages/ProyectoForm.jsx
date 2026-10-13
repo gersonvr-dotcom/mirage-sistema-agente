@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
-import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
+import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
+import { etiquetaTipoPedido } from '../pedidoTipos';
 import { api } from '../api';
 
 export function ProyectoForm() {
@@ -43,6 +44,20 @@ export function ProyectoForm() {
   function update(field, value) {
     setForm((f) => ({ ...f, [field]: value }));
   }
+
+  // Al crear: avisa si ya existe una obra parecida del mismo cliente (un adicional debe ser una OP, no un proyecto).
+  const [similares, setSimilares] = useState(null);
+  useEffect(() => {
+    setSimilares(null);
+    if (editando || !form.cliente_id || form.nombre.trim().length < 3) return undefined;
+    const t = setTimeout(() => {
+      api
+        .proyectosSimilares({ cliente_id: form.cliente_id, nombre: form.nombre })
+        .then(setSimilares)
+        .catch(() => {}); // el aviso es solo una ayuda: si falla, no bloquea el formulario
+    }, 400);
+    return () => clearTimeout(t);
+  }, [editando, form.cliente_id, form.nombre]);
 
   async function handleSubmit(e) {
     e.preventDefault();
@@ -93,6 +108,27 @@ export function ProyectoForm() {
           Nombre
           <input value={form.nombre} onChange={(e) => update('nombre', e.target.value)} required />
         </label>
+        {similares?.similares.length > 0 && (
+          <div className="aviso-similar" role="alert">
+            <b>Ya existe {similares.similares.length === 1 ? 'una obra similar' : 'obras similares'} para este cliente.</b>{' '}
+            {similares.tipoPedido !== 'principal'
+              ? `"${form.nombre}" parece un pedido ${etiquetaTipoPedido(similares.tipoPedido).toLowerCase()} de esa obra: conviene crear una OP en ella en lugar de un proyecto nuevo.`
+              : 'Revisa que no sea la misma obra; un pedido adicional o una fase debe ser una OP de la obra existente.'}
+            <ul>
+              {similares.similares.map((p) => (
+                <li key={p.id}>
+                  <Link to={`/proyectos/${p.id}`}>{p.nombre}</Link> ({p.num_ops} OPs) ·{' '}
+                  <Link
+                    to={`/ops/nueva?proyecto_id=${p.id}&tipo_pedido=${similares.tipoPedido === 'principal' ? 'adicional' : similares.tipoPedido}&descripcion_pedido=${encodeURIComponent(form.nombre)}`}
+                  >
+                    Crear una OP en esta obra
+                  </Link>
+                </li>
+              ))}
+            </ul>
+            Si de verdad es otra obra, puedes guardar el proyecto igualmente.
+          </div>
+        )}
         <label>
           Descripción
           <textarea value={form.descripcion} onChange={(e) => update('descripcion', e.target.value)} />

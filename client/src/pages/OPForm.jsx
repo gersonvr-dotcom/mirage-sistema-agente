@@ -1,13 +1,20 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { api } from '../api';
+import { TIPOS_PEDIDO } from '../pedidoTipos';
 
 export function OPForm() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const proyectoPreseleccionado = searchParams.get('proyecto_id') || '';
   const [proyectos, setProyectos] = useState([]);
-  const [form, setForm] = useState({ numero_op: '', proyecto_id: proyectoPreseleccionado, fecha_emision: '' });
+  const [form, setForm] = useState({
+    numero_op: '',
+    proyecto_id: proyectoPreseleccionado,
+    fecha_emision: '',
+    tipo_pedido: TIPOS_PEDIDO.some((t) => t.valor === searchParams.get('tipo_pedido')) ? searchParams.get('tipo_pedido') : 'principal',
+    descripcion_pedido: searchParams.get('descripcion_pedido') || '',
+  });
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState(null);
 
@@ -66,6 +73,24 @@ export function OPForm() {
             value={form.fecha_emision}
             onChange={(e) => update('fecha_emision', e.target.value)}
             required
+          />
+        </label>
+        <label>
+          Tipo de pedido
+          <select value={form.tipo_pedido} onChange={(e) => update('tipo_pedido', e.target.value)}>
+            {TIPOS_PEDIDO.map((t) => (
+              <option key={t.valor} value={t.valor}>
+                {t.etiqueta}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label>
+          Descripción del pedido (opcional)
+          <input
+            value={form.descripcion_pedido}
+            onChange={(e) => update('descripcion_pedido', e.target.value)}
+            placeholder="Ej. ADICIONAL de enchapes de baños"
           />
         </label>
         {error && <p className="error">{error}</p>}

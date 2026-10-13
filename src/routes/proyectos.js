@@ -9,10 +9,22 @@ import {
 } from '../db/queries.js';
 import { requireRole } from '../middleware/requireRole.js';
 import { candidatosFusion, fusionarProyectos } from '../services/proyectosFusion.js';
+import { buscarProyectosSimilares } from '../services/proyectosSimilares.js';
 
 export const proyectosRouter = Router();
 
 // Las rutas fijas van antes de '/:id' para que no se interpreten como un id.
+proyectosRouter.get('/similares', async (req, res) => {
+  const { cliente_id, nombre, excluir_id } = req.query;
+  if (!cliente_id || !nombre) return res.status(400).json({ error: 'Faltan "cliente_id" y/o "nombre" en la consulta.' });
+  try {
+    res.json(await buscarProyectosSimilares({ clienteId: Number(cliente_id), nombre: String(nombre), excluirId: excluir_id }));
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'No se pudo buscar proyectos similares.', detail: err.message });
+  }
+});
+
 proyectosRouter.get('/candidatos-fusion', requireRole('administrador'), async (req, res) => {
   try {
     res.json(await candidatosFusion());

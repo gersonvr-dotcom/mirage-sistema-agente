@@ -61,6 +61,7 @@ export const api = {
   },
   proyecto: (id) => request(`/proyectos/${id}`),
   candidatosFusion: () => request('/proyectos/candidatos-fusion'),
+  proyectosSimilares: (params) => request(`/proyectos/similares?${new URLSearchParams(params)}`),
   fusionarProyectos: (data) => request('/proyectos/fusionar', { method: 'POST', body: JSON.stringify(data) }),
   crearProyecto: (data) => request('/proyectos', { method: 'POST', body: JSON.stringify(data) }),
   actualizarProyecto: (id, data) =>

@@ -1,6 +1,7 @@
-import { useEffect, useState, useCallback } from 'react';
+import { Fragment, useEffect, useState, useCallback } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { api } from '../api';
+import { etiquetaTipoPedido } from '../pedidoTipos';
 import { useAuth } from '../AuthContext';
 
 export function ProyectoDetail() {
@@ -50,6 +51,9 @@ export function ProyectoDetail() {
   if (loading) return <p style={{ padding: 24 }}>Cargando…</p>;
   if (!proyecto) return <p style={{ padding: 24 }}>{error || 'Proyecto no encontrado.'}</p>;
 
+  const principales = ops.filter((o) => (o.tipo_pedido ?? 'principal') === 'principal');
+  const adicionales = ops.filter((o) => (o.tipo_pedido ?? 'principal') !== 'principal');
+
   return (
     <div className="page">
       <h1>{proyecto.nombre}</h1>
@@ -95,6 +99,7 @@ export function ProyectoDetail() {
           <thead>
             <tr>
               <th>Número</th>
+              <th>Tipo</th>
               <th>Líneas</th>
               <th>Estado</th>
               <th>Emisión</th>
@@ -102,50 +107,68 @@ export function ProyectoDetail() {
             </tr>
           </thead>
           <tbody>
-            {ops.map((o) => (
-              <tr key={o.id}>
-                <td>{o.numero_op}</td>
-                <td>{o.num_items}</td>
-                <td>
-                  <span className={`badge badge-op-${o.estado_general}`}>{o.estado_general}</span>
-                </td>
-                <td>{new Date(o.fecha_emision).toLocaleDateString()}</td>
-                <td>
-                  <div className="row-actions">
-                    <Link to={`/ops/${o.id}`} className="btn-row-action">
-                      Ver
-                    </Link>
-                    {esAdmin &&
-                      (confirmandoId === o.id ? (
-                        <span className="row-actions-confirm">
-                          ¿Seguro?
-                          <button className="btn-row-action btn-row-action-danger" onClick={() => handleDelete(o.id)}>
-                            Sí, eliminar
-                          </button>
+            {[
+              ['Pedido principal', principales],
+              ['Pedidos adicionales y otros', adicionales],
+            ].map(([titulo, lista]) =>
+              lista.length === 0 ? null : (
+                <Fragment key={titulo}>
+                  <tr className="fila-grupo">
+                    <th colSpan={6}>
+                      {titulo} ({lista.length})
+                    </th>
+                  </tr>
+              {lista.map((o) => (
+                <tr key={o.id}>
+                  <td>{o.numero_op}</td>
+                  <td>
+                    <span className="badge">{etiquetaTipoPedido(o.tipo_pedido)}</span>
+                    {o.descripcion_pedido ? <span className="chat-empty"> {o.descripcion_pedido}</span> : null}
+                  </td>
+                  <td>{o.num_items}</td>
+                  <td>
+                    <span className={`badge badge-op-${o.estado_general}`}>{o.estado_general}</span>
+                  </td>
+                  <td>{new Date(o.fecha_emision).toLocaleDateString()}</td>
+                  <td>
+                    <div className="row-actions">
+                      <Link to={`/ops/${o.id}`} className="btn-row-action">
+                        Ver
+                      </Link>
+                      {esAdmin &&
+                        (confirmandoId === o.id ? (
+                          <span className="row-actions-confirm">
+                            ¿Seguro?
+                            <button className="btn-row-action btn-row-action-danger" onClick={() => handleDelete(o.id)}>
+                              Sí, eliminar
+                            </button>
+                            <button
+                              type="button"
+                              className="btn-row-action"
+                              onClick={() => setConfirmandoId(null)}
+                            >
+                              No
+                            </button>
+                          </span>
+                        ) : (
                           <button
                             type="button"
-                            className="btn-row-action"
-                            onClick={() => setConfirmandoId(null)}
+                            className="btn-row-action btn-row-action-danger"
+                            onClick={() => setConfirmandoId(o.id)}
                           >
-                            No
+                            Eliminar
                           </button>
-                        </span>
-                      ) : (
-                        <button
-                          type="button"
-                          className="btn-row-action btn-row-action-danger"
-                          onClick={() => setConfirmandoId(o.id)}
-                        >
-                          Eliminar
-                        </button>
-                      ))}
-                  </div>
-                </td>
-              </tr>
-            ))}
+                        ))}
+                    </div>
+                  </td>
+                </tr>
+              ))}
+                </Fragment>
+              )
+            )}
             {ops.length === 0 && (
               <tr>
-                <td colSpan={5}>Este proyecto no tiene OPs.</td>
+                <td colSpan={6}>Este proyecto no tiene OPs.</td>
               </tr>
             )}
           </tbody>

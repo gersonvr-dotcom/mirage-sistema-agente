@@ -12,6 +12,7 @@ import {
 } from '../db/queries.js';
 import { requireRole } from '../middleware/requireRole.js';
 import { opSegunRol } from '../services/permisosPrecios.js';
+import { TIPOS_PEDIDO } from '../db/pedidoTipos.js';
 
 export const opsRouter = Router();
 
@@ -38,12 +39,15 @@ opsRouter.get('/:id', async (req, res) => {
 });
 
 opsRouter.post('/', async (req, res) => {
-  const { numero_op, proyecto_id, pedido_id, fecha_emision } = req.body ?? {};
+  const { numero_op, proyecto_id, pedido_id, fecha_emision, tipo_pedido, descripcion_pedido } = req.body ?? {};
   if (!numero_op || !proyecto_id || !fecha_emision) {
     return res.status(400).json({ error: 'Faltan "numero_op", "proyecto_id" y/o "fecha_emision" en el body.' });
   }
+  if (tipo_pedido && !TIPOS_PEDIDO.includes(tipo_pedido)) {
+    return res.status(400).json({ error: `tipo_pedido no válido. Valores permitidos: ${TIPOS_PEDIDO.join(', ')}.` });
+  }
   try {
-    const op = await crearOP({ numero_op, proyecto_id, pedido_id, fecha_emision });
+    const op = await crearOP({ numero_op, proyecto_id, pedido_id, fecha_emision, tipo_pedido, descripcion_pedido });
     res.status(201).json({ op: opSegunRol(op, req.user.rol) });
   } catch (err) {
     if (err.code === 'NUMERO_OP_DUPLICADO' || err.code === 'PROYECTO_INEXISTENTE') {

@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { api } from '../api';
 import { useAuth } from '../AuthContext';
+import { etiquetaTipoPedido } from '../pedidoTipos';
 
 const ESTADOS_OP = ['abierta', 'en_produccion', 'en_transito', 'cerrada', 'cancelada'];
 const ESTADOS_ITEM = ['pendiente', 'en_produccion', 'embarcado', 'en_aduana', 'en_bodega', 'entregado', 'cancelado'];
@@ -188,6 +189,13 @@ export function OPDetail() {
             <span className="stat-label">Proyecto</span>
             <p>
               <Link to={`/proyectos/${op.proyecto_id}`}>{op.proyecto}</Link>
+            </p>
+          </div>
+          <div>
+            <span className="stat-label">Tipo de pedido</span>
+            <p>
+              {etiquetaTipoPedido(op.tipo_pedido)}
+              {op.descripcion_pedido ? <span className="chat-empty"> · {op.descripcion_pedido}</span> : null}
             </p>
           </div>
           <div>

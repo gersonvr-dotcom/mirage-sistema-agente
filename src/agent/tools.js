@@ -16,6 +16,7 @@ import {
 import { obtenerFilasComerciales } from '../services/sharepoint.js';
 import { rankingClientesPorM2, volumenTotalVendido, AGRUPACIONES_VALIDAS, METRICAS_VALIDAS } from '../db/analitica.js';
 import { TIPOS_CLIENTE } from '../db/clienteTipos.js';
+import { buscarProyectosSimilares } from '../services/proyectosSimilares.js';
 import { puedeVerPrecios, sinCamposDePrecio } from '../services/permisosPrecios.js';
 
 export { puedeVerPrecios, sinCamposDePrecio };
@@ -205,9 +206,12 @@ export const TOOL_DEFINITIONS = [
   {
     name: 'crear_proyecto',
     description:
-      'Crea un nuevo proyecto para un cliente. Acción sensible: la primera llamada debe ir con ' +
-      '"confirmado": false (o sin el campo) para que el usuario confirme; solo se ejecuta de ' +
-      'verdad cuando "confirmado" es true.',
+      'Crea un nuevo proyecto (una OBRA) para un cliente. Los pedidos adicionales, de perfiles o de enchape de una obra ' +
+      'ya existente NO son proyectos nuevos sino OPs de esa obra: antes de crear, la herramienta busca obras similares del ' +
+      'cliente y, si las hay, devuelve "similares" sin crear nada para que le preguntes al usuario si es un adicional. ' +
+      'Solo si el usuario insiste en un proyecto aparte llámala de nuevo con "crear_igualmente": true. ' +
+      'Acción sensible: la primera llamada debe ir con "confirmado": false (o sin el campo) para que el usuario confirme; ' +
+      'solo se ejecuta de verdad cuando "confirmado" es true.',
     parametersJsonSchema: {
       type: 'object',
       properties: {
@@ -217,6 +221,10 @@ export const TOOL_DEFINITIONS = [
         confirmado: {
           type: 'boolean',
           description: 'true solo si el usuario ya confirmó explícitamente que se cree el proyecto.',
+        },
+        crear_igualmente: {
+          type: 'boolean',
+          description: 'true solo si el usuario, informado de las obras similares, pidió explícitamente crear un proyecto aparte.',
         },
       },
       required: ['cliente', 'nombre'],
@@ -363,12 +371,31 @@ async function consultarPedidosComercial(q) {
   };
 }
 
-async function crearProyectoPorNombre({ cliente, nombre, descripcion, confirmado }) {
-  if (!confirmado) return { requiereConfirmacion: true, mensaje: MENSAJE_REQUIERE_CONFIRMACION };
-
+async function crearProyectoPorNombre({ cliente, nombre, descripcion, confirmado, crear_igualmente }) {
+  // Resolver el cliente y buscar obras similares son lecturas: se hacen antes de pedir confirmación para no
+  // pedirle al usuario que confirme la creación de un proyecto que en realidad es un adicional.
   const clientes = await listarClientes({ q: cliente });
   const resuelto = await resolverUno(clientes, 'cliente', cliente);
   if (!resuelto.unico) return resuelto;
+
+  if (!crear_igualmente) {
+    const { nombreBase, tipoPedido, similares } = await buscarProyectosSimilares({ clienteId: resuelto.unico.id, nombre });
+    if (similares.length > 0) {
+      return {
+        similares,
+        tipo_pedido_detectado: tipoPedido,
+        obra_detectada: nombreBase,
+        mensaje:
+          `No se creó nada. El cliente "${resuelto.unico.nombre}" ya tiene ${similares.length === 1 ? 'una obra similar' : 'obras similares'} ` +
+          `a "${nombre}": ${similares.map((p) => `"${p.nombre}" (${p.num_ops} OPs)`).join(', ')}. Un pedido adicional, de perfiles o ` +
+          'de enchape es una OP de la obra existente, no un proyecto nuevo. Explícale esto al usuario y pregúntale si se trata de ' +
+          'un adicional de esa obra (en ese caso no hay que crear ningún proyecto) o si de verdad quiere un proyecto aparte; ' +
+          'solo en ese último caso vuelve a llamar con "crear_igualmente": true.',
+      };
+    }
+  }
+
+  if (!confirmado) return { requiereConfirmacion: true, mensaje: MENSAJE_REQUIERE_CONFIRMACION };
 
   const proyecto = await crearProyecto({ cliente_id: resuelto.unico.id, nombre, descripcion });
   return { creado: true, proyecto };

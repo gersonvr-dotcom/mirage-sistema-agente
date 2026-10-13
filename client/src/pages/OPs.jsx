@@ -1,6 +1,7 @@
 import { useEffect, useState, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import { api } from '../api';
+import { etiquetaTipoPedido } from '../pedidoTipos';
 import { useAuth } from '../AuthContext';
 
 export function OPs() {
@@ -83,6 +84,7 @@ export function OPs() {
               <th>Número</th>
               <th>Cliente</th>
               <th>Proyecto</th>
+              <th>Tipo</th>
               <th>Líneas</th>
               <th>Estado</th>
               <th>Emisión</th>
@@ -95,6 +97,7 @@ export function OPs() {
                 <td>{o.numero_op}</td>
                 <td>{o.cliente}</td>
                 <td>{o.proyecto}</td>
+                <td>{etiquetaTipoPedido(o.tipo_pedido)}</td>
                 <td>{o.num_items}</td>
                 <td>
                   <span className={`badge badge-op-${o.estado_general}`}>{o.estado_general}</span>
@@ -135,7 +138,7 @@ export function OPs() {
             ))}
             {ops.length === 0 && (
               <tr>
-                <td colSpan={7}>No hay OPs.</td>
+                <td colSpan={8}>No hay OPs.</td>
               </tr>
             )}
           </tbody>
