@@ -35,12 +35,17 @@ proyectosRouter.post('/fusionar', requireRole('administrador'), async (req, res)
       dryRun: Boolean(dry_run),
     });
     if (!resultado.dry_run) {
-      await registrarAccionAgente({
-        usuarioId: req.user.sub,
-        toolName: 'fusionar_proyectos',
-        input: { matriz_id, proyecto_ids, nombre_final },
-        resultado,
-      });
+      // La fusión ya está confirmada: un fallo al registrar la auditoría no debe presentarse como error de la fusión.
+      try {
+        await registrarAccionAgente({
+          usuarioId: req.user.sub,
+          toolName: 'fusionar_proyectos',
+          input: { matriz_id, proyecto_ids, nombre_final },
+          resultado,
+        });
+      } catch (errAuditoria) {
+        console.error('No se pudo registrar la auditoría de la fusión:', errAuditoria.message);
+      }
     }
     res.json(resultado);
   } catch (err) {

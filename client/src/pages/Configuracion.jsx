@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { api } from '../api';
+import { NormalizarProyectos } from '../components/NormalizarProyectos';
 
 const POLL_MS = 4000;
 
@@ -143,6 +144,10 @@ export function Configuracion() {
               <span className="stat-label">OPs actualizadas</span>
               <span className="stat-value">{resultadoExcel.ops_actualizadas}</span>
             </div>
+            <div className="stat-tile">
+              <span className="stat-label">OPs reasignadas a su obra</span>
+              <span className="stat-value">{resultadoExcel.ops_reasignadas_a_obra}</span>
+            </div>
           </div>
 
           {resultadoExcel.errores.length > 0 && (
@@ -253,6 +258,14 @@ export function Configuracion() {
           )}
         </>
       )}
+
+      <h2 style={{ marginTop: 32 }}>Normalizar proyectos (obras duplicadas)</h2>
+      <p className="chat-empty">
+        Una misma obra puede haber quedado registrada como varios proyectos (por ejemplo "ALESTE 137", "ALESTE 137 ADICIONAL" y
+        "ALESTE 137 PERFIL"). Aquí se revisan y se fusionan: las OPs pasan a la obra principal como pedidos adicionales, sin perder
+        ninguna OP ni cotización. Conviene sincronizar con el Excel Madre antes de normalizar.
+      </p>
+      <NormalizarProyectos />
     </div>
   );
 }

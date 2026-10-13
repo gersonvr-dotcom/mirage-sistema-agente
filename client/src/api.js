@@ -59,6 +59,8 @@ export const api = {
     return request(`/proyectos${qs ? `?${qs}` : ''}`);
   },
   proyecto: (id) => request(`/proyectos/${id}`),
+  candidatosFusion: () => request('/proyectos/candidatos-fusion'),
+  fusionarProyectos: (data) => request('/proyectos/fusionar', { method: 'POST', body: JSON.stringify(data) }),
   crearProyecto: (data) => request('/proyectos', { method: 'POST', body: JSON.stringify(data) }),
   actualizarProyecto: (id, data) =>
     request(`/proyectos/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
