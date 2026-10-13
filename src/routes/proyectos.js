@@ -5,10 +5,50 @@ import {
   crearProyecto,
   actualizarProyecto,
   eliminarProyecto,
+  registrarAccionAgente,
 } from '../db/queries.js';
 import { requireRole } from '../middleware/requireRole.js';
+import { candidatosFusion, fusionarProyectos } from '../services/proyectosFusion.js';
 
 export const proyectosRouter = Router();
+
+// Las rutas fijas van antes de '/:id' para que no se interpreten como un id.
+proyectosRouter.get('/candidatos-fusion', requireRole('administrador'), async (req, res) => {
+  try {
+    res.json(await candidatosFusion());
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'No se pudo analizar los proyectos.', detail: err.message });
+  }
+});
+
+proyectosRouter.post('/fusionar', requireRole('administrador'), async (req, res) => {
+  const { matriz_id, proyecto_ids, nombre_final, dry_run } = req.body ?? {};
+  if (!matriz_id || !Array.isArray(proyecto_ids) || proyecto_ids.length === 0) {
+    return res.status(400).json({ error: 'Faltan "matriz_id" y/o "proyecto_ids" (lista) en el body.' });
+  }
+  try {
+    const resultado = await fusionarProyectos({
+      matrizId: matriz_id,
+      proyectoIds: proyecto_ids,
+      nombreFinal: nombre_final,
+      dryRun: Boolean(dry_run),
+    });
+    if (!resultado.dry_run) {
+      await registrarAccionAgente({
+        usuarioId: req.user.sub,
+        toolName: 'fusionar_proyectos',
+        input: { matriz_id, proyecto_ids, nombre_final },
+        resultado,
+      });
+    }
+    res.json(resultado);
+  } catch (err) {
+    if (err.code === 'FUSION_INVALIDA') return res.status(400).json({ error: err.message });
+    console.error(err);
+    res.status(500).json({ error: 'No se pudo fusionar los proyectos.', detail: err.message });
+  }
+});
 
 proyectosRouter.get('/', async (req, res) => {
   try {

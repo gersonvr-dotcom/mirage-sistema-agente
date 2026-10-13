@@ -1,5 +1,6 @@
 import { pool } from '../db/pool.js';
 import { obtenerFilasComerciales } from './sharepoint.js';
+import { normalizarProyecto, claveTexto } from './proyectoNormalizer.js';
 
 const FECHA_RE = /^\d{4}-\d{2}-\d{2}$/;
 
@@ -40,6 +41,39 @@ function normFechaPactada(raw, observaciones) {
 }
 
 /**
+ * Decide a qué obra (proyecto matriz) pertenece el texto de PROYECTO de una fila:
+ *  1) un alias guardado por una fusión manual (proyecto_alias), por nombre completo y luego por obra;
+ *  2) un proyecto del cliente que ya se llama como la obra;
+ *  3) si no hay ninguno, se crea la obra con el nombre sin sufijos.
+ * Devuelve { id, key } con la clave normalizada del nombre del proyecto elegido.
+ */
+async function resolverObra(conn, clienteId, norma, stats, proyectosPorCliente) {
+  const [alias] = await conn.query(
+    `SELECT a.proyecto_id, p.nombre
+       FROM proyecto_alias a JOIN proyectos p ON p.id = a.proyecto_id
+      WHERE a.cliente_id = ? AND a.alias_normalizado IN (?, ?)
+      ORDER BY (a.alias_normalizado = ?) DESC
+      LIMIT 1`,
+    [clienteId, norma.aliasKey, norma.baseKey, norma.aliasKey]
+  );
+  if (alias.length) return { id: alias[0].proyecto_id, key: claveTexto(alias[0].nombre) };
+
+  if (!proyectosPorCliente.has(clienteId)) {
+    const [filas] = await conn.query('SELECT id, nombre FROM proyectos WHERE cliente_id = ? ORDER BY id', [clienteId]);
+    proyectosPorCliente.set(clienteId, filas.map((p) => ({ id: p.id, key: claveTexto(p.nombre) })));
+  }
+  const delCliente = proyectosPorCliente.get(clienteId);
+  const existente = delCliente.find((p) => p.key === norma.baseKey);
+  if (existente) return existente;
+
+  const [res] = await conn.query('INSERT INTO proyectos (cliente_id, nombre) VALUES (?, ?)', [clienteId, norma.nombreBase]);
+  stats.proyectos_creados++;
+  const nueva = { id: res.insertId, key: norma.baseKey };
+  delCliente.push(nueva);
+  return nueva;
+}
+
+/**
  * Trae en vivo el Excel Madre 2026 desde SharePoint y sincroniza clientes, proyectos,
  * cotizaciones y OPs contra la base de datos: crea lo que no existe y actualiza (por
  * numero_op) lo que ya existía, para reflejar ediciones hechas en el Excel después de la
@@ -59,12 +93,14 @@ export async function sincronizarDesdeExcelMadre() {
     cotizaciones_creadas: 0,
     ops_creadas: 0,
     ops_actualizadas: 0,
+    ops_reasignadas_a_obra: 0,
     errores: [],
   };
 
   const clienteCache = new Map();
   const proyectoCache = new Map();
   const cotizacionCache = new Map();
+  const proyectosPorCliente = new Map();
 
   const conn = await pool.getConnection();
   try {
@@ -84,25 +120,18 @@ export async function sincronizarDesdeExcelMadre() {
           clienteCache.set(r.cliente, clienteId);
         }
 
-        const proyectoKey = `${clienteId}::${r.proyecto}`;
-        let proyectoId = proyectoCache.get(proyectoKey);
-        if (!proyectoId) {
-          const [existentes] = await conn.query(
-            'SELECT id FROM proyectos WHERE cliente_id = ? AND nombre = ?',
-            [clienteId, r.proyecto]
-          );
-          if (existentes.length) {
-            proyectoId = existentes[0].id;
-          } else {
-            const [res] = await conn.query(
-              'INSERT INTO proyectos (cliente_id, nombre) VALUES (?, ?)',
-              [clienteId, r.proyecto]
-            );
-            proyectoId = res.insertId;
-            stats.proyectos_creados++;
-          }
-          proyectoCache.set(proyectoKey, proyectoId);
+        // El texto de PROYECTO del Excel puede traer sufijos ("ALESTE 137 PERFIL"): la OP cuelga de la obra
+        // (proyecto matriz) y el sufijo queda como tipo_pedido/descripcion_pedido de la OP.
+        const norma = normalizarProyecto(r.proyecto);
+        const proyectoKey = `${clienteId}::${norma.aliasKey}`;
+        let obra = proyectoCache.get(proyectoKey);
+        if (!obra) {
+          obra = await resolverObra(conn, clienteId, norma, stats, proyectosPorCliente);
+          proyectoCache.set(proyectoKey, obra);
         }
+        const proyectoId = obra.id;
+        const tipoPedido = norma.tipoPedido;
+        const descripcionPedido = norma.aliasKey !== obra.key ? String(r.proyecto).trim().slice(0, 150) : null;
 
         const numeroCotizacion = normOc(r.cotizacion);
         let cotizacionId = null;
@@ -131,22 +160,23 @@ export async function sincronizarDesdeExcelMadre() {
         const { fechaPactada, observaciones } = normFechaPactada(r.fecha_pactada, normObservaciones(r.observaciones));
         const ocCliente = normOc(r.oc);
 
-        const [opExistente] = await conn.query('SELECT id FROM ops WHERE numero_op = ?', [r.op]);
+        const [opExistente] = await conn.query('SELECT id, proyecto_id FROM ops WHERE numero_op = ?', [r.op]);
         if (opExistente.length) {
           await conn.query(
             `UPDATE ops
-                SET cotizacion_id = ?, proyecto_id = ?, cliente_id = ?, fecha_emision = ?,
-                    fecha_pactada = ?, oc_cliente = ?, observaciones_comercial = ?
+                SET cotizacion_id = ?, proyecto_id = ?, cliente_id = ?, tipo_pedido = ?, descripcion_pedido = ?,
+                    fecha_emision = ?, fecha_pactada = ?, oc_cliente = ?, observaciones_comercial = ?
               WHERE id = ?`,
-            [cotizacionId, proyectoId, clienteId, r.fecha_pedido, fechaPactada, ocCliente, observaciones, opExistente[0].id]
+            [cotizacionId, proyectoId, clienteId, tipoPedido, descripcionPedido, r.fecha_pedido, fechaPactada, ocCliente, observaciones, opExistente[0].id]
           );
           stats.ops_actualizadas++;
+          if (opExistente[0].proyecto_id !== proyectoId) stats.ops_reasignadas_a_obra++;
         } else {
           await conn.query(
             `INSERT INTO ops
-               (numero_op, cotizacion_id, proyecto_id, cliente_id, fecha_emision, fecha_pactada, oc_cliente, observaciones_comercial, estado_general)
-             VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'abierta')`,
-            [r.op, cotizacionId, proyectoId, clienteId, r.fecha_pedido, fechaPactada, ocCliente, observaciones]
+               (numero_op, cotizacion_id, proyecto_id, cliente_id, tipo_pedido, descripcion_pedido, fecha_emision, fecha_pactada, oc_cliente, observaciones_comercial, estado_general)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'abierta')`,
+            [r.op, cotizacionId, proyectoId, clienteId, tipoPedido, descripcionPedido, r.fecha_pedido, fechaPactada, ocCliente, observaciones]
           );
           stats.ops_creadas++;
         }
@@ -154,6 +184,11 @@ export async function sincronizarDesdeExcelMadre() {
         await conn.commit();
       } catch (err) {
         await conn.rollback();
+        // Los cachés pudieron guardar ids creados dentro de la transacción que acaba de deshacerse.
+        clienteCache.clear();
+        proyectoCache.clear();
+        cotizacionCache.clear();
+        proyectosPorCliente.clear();
         stats.errores.push({ fila_excel: r.fila_excel, op: r.op, mensaje: err.message });
       }
     }

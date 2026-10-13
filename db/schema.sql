@@ -41,6 +41,19 @@ CREATE TABLE proyectos (
   FOREIGN KEY (cliente_id) REFERENCES clientes(id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
+-- Memoria de fusiones y equivalencias de nombre: "ALESTE 137 PERFIL" -> proyecto matriz "ALESTE 137".
+-- Evita que la sincronización con el Excel Madre vuelva a crear proyectos huérfanos.
+CREATE TABLE proyecto_alias (
+  id                 INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  cliente_id         INT UNSIGNED NOT NULL,
+  alias_normalizado  VARCHAR(190) NOT NULL,
+  proyecto_id        INT UNSIGNED NOT NULL,
+  created_at         TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE KEY uq_proyecto_alias (cliente_id, alias_normalizado),
+  FOREIGN KEY (cliente_id) REFERENCES clientes(id),
+  FOREIGN KEY (proyecto_id) REFERENCES proyectos(id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
 CREATE TABLE productos (
   id            INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
   codigo        VARCHAR(60) NOT NULL UNIQUE,
@@ -83,8 +96,10 @@ CREATE TABLE ops (
   numero_op               VARCHAR(40) NOT NULL UNIQUE,
   pedido_id               INT UNSIGNED,
   cotizacion_id           INT UNSIGNED,
-  proyecto_id             INT UNSIGNED NOT NULL,
+  proyecto_id             INT UNSIGNED NOT NULL,   -- siempre la obra MATRIZ; los adicionales son OPs de la obra
   cliente_id              INT UNSIGNED NOT NULL,
+  tipo_pedido             ENUM('principal','adicional','perfiles','otro') NOT NULL DEFAULT 'principal',
+  descripcion_pedido      VARCHAR(150) NULL,       -- texto original de PROYECTO en el Excel (ej. 'ALESTE 137 PERFIL')
   fecha_emision           DATE NOT NULL,
   fecha_pactada           DATE,
   oc_cliente              VARCHAR(60),
