@@ -156,6 +156,7 @@ CREATE TABLE op_items (
   producto_id           INT UNSIGNED NOT NULL,
   proveedor_id          INT UNSIGNED,
   acabado               VARCHAR(60),
+  formato               VARCHAR(100) NULL,        -- formato de ESTA línea; productos.formato solo guarda el primero visto
   cajas                 DECIMAL(10,2),
   m2_x_caja             DECIMAL(10,4),
   cantidad              DECIMAL(14,2) NOT NULL,

@@ -46,7 +46,7 @@ export async function buscarPorOP(numeroOp) {
   const [rows] = await pool.query(
     `SELECT o.numero_op, o.fecha_emision, o.estado_general,
             c.nombre AS cliente, p.nombre AS proyecto,
-            pr.codigo, pr.nombre AS producto, pr.formato, pr.unidad_medida,
+            pr.codigo, pr.nombre AS producto, COALESCE(oi.formato, pr.formato) AS formato, pr.unidad_medida,
             oi.acabado, oi.cajas, oi.m2_x_caja, oi.cantidad, oi.notas,
             oi.fecha_estimada_entrega, oi.estado AS estado_item,
             oi.precio_unitario, oi.moneda, oi.descuento_pct, oi.importe_total,
@@ -84,7 +84,7 @@ export async function buscarPorProducto(codigoONombre) {
   const like = `%${codigoONombre}%`;
   const [rows] = await pool.query(
     `SELECT o.numero_op, c.nombre AS cliente, p.nombre AS proyecto,
-            pr.codigo, pr.nombre AS producto, pr.formato, pr.unidad_medida,
+            pr.codigo, pr.nombre AS producto, COALESCE(oi.formato, pr.formato) AS formato, pr.unidad_medida,
             oi.acabado, oi.cajas, oi.m2_x_caja, oi.cantidad, oi.notas,
             oi.estado AS estado_item, oi.fecha_estimada_entrega
        FROM op_items oi
@@ -403,7 +403,7 @@ export async function estadoProyecto(nombreProyecto) {
 
   for (const op of ops) {
     const [items] = await pool.query(
-      `SELECT oi.id, pr.codigo, pr.nombre AS producto, pr.formato, pr.unidad_medida,
+      `SELECT oi.id, pr.codigo, pr.nombre AS producto, COALESCE(oi.formato, pr.formato) AS formato, pr.unidad_medida,
               oi.acabado, oi.cajas, oi.m2_x_caja, oi.cantidad, oi.notas,
               oi.fecha_estimada_entrega, oi.estado AS estado_item,
               prov.nombre AS proveedor,
@@ -505,7 +505,7 @@ export async function obtenerOP(id) {
   if (!op) return null;
 
   const [items] = await pool.query(
-    `SELECT oi.id, oi.producto_id, pr.codigo, pr.nombre AS producto, pr.formato, pr.unidad_medida,
+    `SELECT oi.id, oi.producto_id, pr.codigo, pr.nombre AS producto, COALESCE(oi.formato, pr.formato) AS formato, pr.unidad_medida,
             oi.proveedor_id, prov.nombre AS proveedor,
             oi.acabado, oi.cajas, oi.m2_x_caja, oi.cantidad, oi.notas,
             oi.fecha_estimada_entrega, oi.estado,
