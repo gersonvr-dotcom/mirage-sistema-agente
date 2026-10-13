@@ -11,6 +11,7 @@ import {
   agregarEtapaSeguimiento,
 } from '../db/queries.js';
 import { requireRole } from '../middleware/requireRole.js';
+import { opSegunRol } from '../services/permisosPrecios.js';
 
 export const opsRouter = Router();
 
@@ -29,7 +30,7 @@ opsRouter.get('/:id', async (req, res) => {
   try {
     const op = await obtenerOP(req.params.id);
     if (!op) return res.status(404).json({ error: 'OP no encontrada.' });
-    res.json({ op });
+    res.json({ op: opSegunRol(op, req.user.rol) });
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'No se pudo obtener la OP.', detail: err.message });
@@ -43,7 +44,7 @@ opsRouter.post('/', async (req, res) => {
   }
   try {
     const op = await crearOP({ numero_op, proyecto_id, pedido_id, fecha_emision });
-    res.status(201).json({ op });
+    res.status(201).json({ op: opSegunRol(op, req.user.rol) });
   } catch (err) {
     if (err.code === 'NUMERO_OP_DUPLICADO' || err.code === 'PROYECTO_INEXISTENTE') {
       return res.status(409).json({ error: err.message });
@@ -61,7 +62,7 @@ opsRouter.put('/:id', async (req, res) => {
   try {
     const op = await actualizarOP(req.params.id, { numero_op, pedido_id, fecha_emision, estado_general });
     if (!op) return res.status(404).json({ error: 'OP no encontrada.' });
-    res.json({ op });
+    res.json({ op: opSegunRol(op, req.user.rol) });
   } catch (err) {
     if (err.code === 'NUMERO_OP_DUPLICADO') {
       return res.status(409).json({ error: err.message });
@@ -89,7 +90,7 @@ opsRouter.post('/:id/items', async (req, res) => {
   }
   try {
     const op = await crearOPItem({ op_id: req.params.id, producto_id, proveedor_id, cantidad, fecha_estimada_entrega, estado });
-    res.status(201).json({ op });
+    res.status(201).json({ op: opSegunRol(op, req.user.rol) });
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'No se pudo agregar la línea.', detail: err.message });
@@ -104,7 +105,7 @@ opsRouter.put('/items/:itemId', async (req, res) => {
   try {
     const op = await actualizarOPItem(req.params.itemId, { producto_id, proveedor_id, cantidad, fecha_estimada_entrega, estado });
     if (!op) return res.status(404).json({ error: 'Línea de OP no encontrada.' });
-    res.json({ op });
+    res.json({ op: opSegunRol(op, req.user.rol) });
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'No se pudo actualizar la línea.', detail: err.message });
@@ -115,7 +116,7 @@ opsRouter.delete('/items/:itemId', async (req, res) => {
   try {
     const op = await eliminarOPItem(req.params.itemId);
     if (!op) return res.status(404).json({ error: 'Línea de OP no encontrada.' });
-    res.json({ op });
+    res.json({ op: opSegunRol(op, req.user.rol) });
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'No se pudo eliminar la línea.', detail: err.message });
@@ -129,7 +130,7 @@ opsRouter.post('/items/:itemId/etapas', async (req, res) => {
   }
   try {
     const op = await agregarEtapaSeguimiento({ op_item_id: req.params.itemId, etapa, fecha_evento, nota });
-    res.status(201).json({ op });
+    res.status(201).json({ op: opSegunRol(op, req.user.rol) });
   } catch (err) {
     if (err.code === 'ITEM_INEXISTENTE') {
       return res.status(404).json({ error: err.message });

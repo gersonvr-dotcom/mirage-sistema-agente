@@ -509,6 +509,7 @@ export async function obtenerOP(id) {
             oi.proveedor_id, prov.nombre AS proveedor,
             oi.acabado, oi.cajas, oi.m2_x_caja, oi.cantidad, oi.notas,
             oi.fecha_estimada_entrega, oi.estado,
+            oi.precio_unitario, oi.moneda, oi.descuento_pct, oi.importe_total,
             (oi.fecha_estimada_entrega < CURDATE()
               AND oi.estado NOT IN ('en_bodega', 'entregado', 'cancelado')) AS atrasado
        FROM op_items oi

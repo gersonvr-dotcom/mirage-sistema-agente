@@ -7,6 +7,26 @@ const ESTADOS_OP = ['abierta', 'en_produccion', 'en_transito', 'cerrada', 'cance
 const ESTADOS_ITEM = ['pendiente', 'en_produccion', 'embarcado', 'en_aduana', 'en_bodega', 'entregado', 'cancelado'];
 const ETAPAS = ['produccion', 'embarque', 'aduana', 'bodega', 'entrega'];
 
+function dinero(valor, moneda) {
+  const n = Number(valor);
+  try {
+    return new Intl.NumberFormat('es', { style: 'currency', currency: moneda || 'USD', currencyDisplay: 'code' }).format(n);
+  } catch {
+    return `${n.toFixed(2)} ${moneda ?? ''}`.trim();
+  }
+}
+
+/** Suma de importes de las líneas por moneda: nunca se mezclan monedas distintas. */
+function totalesPorMoneda(items) {
+  const totales = {};
+  for (const i of items) {
+    if (i.importe_total === null || i.importe_total === undefined) continue;
+    const m = i.moneda ?? '?';
+    totales[m] = (totales[m] ?? 0) + Number(i.importe_total);
+  }
+  return Object.entries(totales);
+}
+
 function fechaInput(iso) {
   return iso ? String(iso).slice(0, 10) : '';
 }
@@ -244,6 +264,20 @@ export function OPDetail() {
 
       {op.items.length === 0 && <p className="chat-empty">Esta OP todavía no tiene líneas.</p>}
 
+      {esAdmin && op.items.length > 0 && (
+        <p className="op-precios-total">
+          <span className="stat-label">Total de las líneas con precio (neto de IVA)</span>{' '}
+          {totalesPorMoneda(op.items).length === 0
+            ? '—'
+            : totalesPorMoneda(op.items)
+                .map(([m, t]) => dinero(t, m))
+                .join(' · ')}
+          {op.items.some((i) => i.importe_total === null || i.importe_total === undefined) && (
+            <span className="chat-empty"> · hay líneas sin precio</span>
+          )}
+        </p>
+      )}
+
       {op.items.map((item) => (
         <div className="op-item-card" key={item.id}>
           {editandoItemId === item.id ? (
@@ -336,6 +370,20 @@ export function OPDetail() {
                 Acabado: {item.acabado ?? '—'} · Cajas: {item.cajas ?? '—'} · M2 x caja: {item.m2_x_caja ?? '—'}
                 {item.notas ? ` · Notas: ${item.notas}` : ''}
               </p>
+              {esAdmin && (
+                <p className="op-item-precio">
+                  {item.precio_unitario === null || item.precio_unitario === undefined ? (
+                    <span className="chat-empty">Sin precio (no se emparejó con una cotización)</span>
+                  ) : (
+                    <>
+                      Precio: {dinero(item.precio_unitario, item.moneda)} / {item.unidad_medida}
+                      {Number(item.descuento_pct) > 0 ? ` · Descuento: ${Number(item.descuento_pct)}%` : ''}
+                      {' · '}
+                      <b>Importe: {dinero(item.importe_total, item.moneda)}</b>
+                    </>
+                  )}
+                </p>
+              )}
 
               {item.historial.length > 0 && (
                 <ul className="op-item-historial">

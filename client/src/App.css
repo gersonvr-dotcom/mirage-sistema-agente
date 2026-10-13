@@ -696,3 +696,11 @@ td {
   width: 16px;
   height: 16px;
 }
+
+.op-precios-total {
+  margin: 4px 0 12px;
+}
+
+.op-item-precio {
+  margin: 4px 0;
+}

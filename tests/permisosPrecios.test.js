@@ -30,3 +30,13 @@ test('sinCamposDePrecio quita precios, moneda, descuento e importe y conserva el
   ]);
   assert.deepEqual(fila, { numero_op: 'OP-1', codigo: 'X', cantidad: 5 });
 });
+
+test('opSegunRol: el administrador recibe la OP intacta y los demás sin precios en las líneas', async () => {
+  const { opSegunRol } = await import('../src/services/permisosPrecios.js');
+  const op = { numero_op: 'OP-1', items: [{ id: 1, cantidad: 5, precio_unitario: 10, moneda: 'USD', importe_total: 50 }] };
+  assert.equal(opSegunRol(op, 'administrador'), op);
+  assert.deepEqual(opSegunRol(op, 'operador'), { numero_op: 'OP-1', items: [{ id: 1, cantidad: 5 }] });
+  assert.deepEqual(opSegunRol(op, undefined).items, [{ id: 1, cantidad: 5 }]);
+  assert.equal(opSegunRol(null, 'operador'), null);
+  assert.ok('precio_unitario' in op.items[0], 'no debe mutar el original');
+});

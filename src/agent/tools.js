@@ -14,19 +14,9 @@ import {
   historialPreciosProducto,
 } from '../db/queries.js';
 import { obtenerFilasComerciales } from '../services/sharepoint.js';
+import { puedeVerPrecios, sinCamposDePrecio } from '../services/permisosPrecios.js';
 
-/** Decisión de producto (Q3 del roadmap): solo el administrador ve precios, costos y montos. */
-export const puedeVerPrecios = (ctx) => ctx?.rol === 'administrador';
-
-const CAMPOS_PRECIO = ['precio_unitario', 'moneda', 'descuento_pct', 'importe_total', 'costo_unitario', 'costo_moneda'];
-
-export function sinCamposDePrecio(filas) {
-  return filas.map((fila) => {
-    const limpia = { ...fila };
-    for (const campo of CAMPOS_PRECIO) delete limpia[campo];
-    return limpia;
-  });
-}
+export { puedeVerPrecios, sinCamposDePrecio };
 
 const SIN_PERMISO_PRECIOS = {
   error: 'sin_permiso',
