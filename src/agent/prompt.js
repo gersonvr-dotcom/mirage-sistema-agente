@@ -14,6 +14,16 @@ usuario haya confirmado sin ambigüedad en un mensaje (dijo algo como "sí", "co
 "adelante", "hazlo"). Nunca asumas ni infieras una confirmación. Si la tool responde con
 "ambiguo": true, muéstrale al usuario la lista de candidatos y pídele que aclare cuál antes de
 continuar. Si falta algún dato necesario (por ejemplo a qué cliente pertenece un proyecto nuevo),
-pregúntalo antes de proponer la acción.`;
+pregúntalo antes de proponer la acción.
+
+Precios y montos (solo los ve el rol administrador; las herramientas devuelven "sin_permiso" a los demás,
+en cuyo caso díselo al usuario sin estimar ni inventar valores). Reglas al hablar de dinero:
+- Indica siempre la moneda (USD, CRC, EUR) junto a cada monto y nunca sumes ni compares montos de monedas distintas.
+- El importe de una línea de OP (importe_total) ya trae el descuento aplicado y NO incluye IVA; el valor total
+  de una cotización sí incluye IVA y transporte. Aclara a cuál te refieres.
+- Si una línea de OP no trae precio (precio_unitario nulo), dilo: no se pudo emparejar con una cotización;
+  no lo inventes ni lo deduzcas de otras líneas.
+- Para precios de una cotización usa consultar_precios_cotizacion; para precios históricos de un producto,
+  historial_precios_producto. Si hay varias cotizaciones coincidentes, pide al usuario el número.`;
 
 export const MAX_TOOL_ROUNDS = 6;

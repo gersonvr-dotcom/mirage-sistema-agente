@@ -56,7 +56,10 @@ agentRouter.post('/chat', async (req, res) => {
   }
 
   try {
-    const { reply, toolCalls, usage, limitReached } = await runAgentChat(req.user.sub, message, provider);
+    const { reply, toolCalls, usage, limitReached } = await runAgentChat(req.user.sub, message, provider, {
+      usuarioId: req.user.sub,
+      rol: req.user.rol,
+    });
     res.json({ reply, toolCalls, usage, limitReached: limitReached ?? false });
   } catch (err) {
     console.error(err);

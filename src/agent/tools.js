@@ -9,8 +9,29 @@ import {
   crearProyecto,
   actualizarProyecto,
   eliminarProyecto,
+  buscarCotizaciones,
+  lineasCotizacion,
+  historialPreciosProducto,
 } from '../db/queries.js';
 import { obtenerFilasComerciales } from '../services/sharepoint.js';
+
+/** Decisión de producto (Q3 del roadmap): solo el administrador ve precios, costos y montos. */
+export const puedeVerPrecios = (ctx) => ctx?.rol === 'administrador';
+
+const CAMPOS_PRECIO = ['precio_unitario', 'moneda', 'descuento_pct', 'importe_total', 'costo_unitario', 'costo_moneda'];
+
+export function sinCamposDePrecio(filas) {
+  return filas.map((fila) => {
+    const limpia = { ...fila };
+    for (const campo of CAMPOS_PRECIO) delete limpia[campo];
+    return limpia;
+  });
+}
+
+const SIN_PERMISO_PRECIOS = {
+  error: 'sin_permiso',
+  mensaje: 'El usuario no tiene permiso para ver precios ni montos (solo el rol administrador). Díselo con claridad y no estimes ni inventes valores.',
+};
 
 const MENSAJE_REQUIERE_CONFIRMACION =
   'Esta acción modifica datos reales y requiere confirmación explícita del usuario. ' +
@@ -127,6 +148,30 @@ export const TOOL_DEFINITIONS = [
     },
   },
   {
+    name: 'consultar_precios_cotizacion',
+    description: 'SOLO ADMINISTRADORES. Devuelve precios de una cotización: totales (gran total antes de descuento, descuento, subtotal, transporte, IVA, valor total, moneda, anticipo) y cada línea con precio unitario e importe. Busca por número exacto de cotización (ej. "2026-045-AN") o por cliente y/o proyecto (coincidencia parcial). Si hay varias cotizaciones coincidentes devuelve solo un resumen para que el usuario elija una por número.',
+    parametersJsonSchema: {
+      type: 'object',
+      properties: {
+        numero_cotizacion: { type: 'string', description: 'Número exacto de cotización, por ejemplo "2026-045-AN".' },
+        cliente: { type: 'string', description: 'Nombre completo o parcial del cliente.' },
+        proyecto: { type: 'string', description: 'Nombre completo o parcial del proyecto.' },
+      },
+    },
+  },
+  {
+    name: 'historial_precios_producto',
+    description: 'SOLO ADMINISTRADORES. Precios de venta unitarios de un producto (línea de catálogo + código/color, ej. "PALMIRA PB 04") en las cotizaciones, de la más reciente a la más antigua, opcionalmente filtrado por cliente. Cada fila trae su moneda: nunca sumes ni compares montos de monedas distintas.',
+    parametersJsonSchema: {
+      type: 'object',
+      properties: {
+        producto: { type: 'string', description: 'Línea y/o código del producto, por ejemplo "PALMIRA PB 04" o "SX01".' },
+        cliente: { type: 'string', description: 'Opcional: limitar a un cliente (nombre parcial).' },
+      },
+      required: ['producto'],
+    },
+  },
+  {
     name: 'crear_proyecto',
     description:
       'Crea un nuevo proyecto para un cliente. Acción sensible: la primera llamada debe ir con ' +
@@ -190,10 +235,16 @@ export const TOOL_DEFINITIONS = [
   },
 ];
 
-export async function ejecutarTool(name, input) {
+export async function ejecutarTool(name, input, ctx = {}) {
   switch (name) {
-    case 'consultar_op':
-      return buscarPorOP(input.numero_op);
+    case 'consultar_op': {
+      const lineas = await buscarPorOP(input.numero_op);
+      return puedeVerPrecios(ctx) ? lineas : sinCamposDePrecio(lineas);
+    }
+    case 'consultar_precios_cotizacion':
+      return puedeVerPrecios(ctx) ? consultarPreciosCotizacion(input) : SIN_PERMISO_PRECIOS;
+    case 'historial_precios_producto':
+      return puedeVerPrecios(ctx) ? historialPreciosProducto(input) : SIN_PERMISO_PRECIOS;
     case 'consultar_cliente':
       return buscarPorCliente(input.nombre_cliente);
     case 'consultar_producto':
@@ -215,6 +266,23 @@ export async function ejecutarTool(name, input) {
     default:
       throw new Error(`Tool desconocida: ${name}`);
   }
+}
+
+async function consultarPreciosCotizacion({ numero_cotizacion, cliente, proyecto }) {
+  if (!numero_cotizacion && !cliente && !proyecto) {
+    return { error: 'Indica el número de cotización, o el cliente y/o el proyecto.' };
+  }
+  const candidatas = await buscarCotizaciones({ numero: numero_cotizacion, cliente, proyecto });
+  if (candidatas.length === 0) return { error: 'No se encontró ninguna cotización con esos datos.' };
+  if (candidatas.length > 1) {
+    return {
+      ambiguo: true,
+      mensaje: 'Hay varias cotizaciones coincidentes. Muéstrale este resumen al usuario y pídele el número de la que quiere ver.',
+      cotizaciones: candidatas.map(({ id, ...resto }) => resto),
+    };
+  }
+  const { id, ...cabecera } = candidatas[0];
+  return { cotizacion: cabecera, lineas: await lineasCotizacion(id) };
 }
 
 async function rankingClientesPorProyectos(limite) {

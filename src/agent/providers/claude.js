@@ -16,7 +16,7 @@ const CLAUDE_TOOLS = TOOL_DEFINITIONS.map(({ name, description, parametersJsonSc
  * Corre el loop del agente para un único mensaje de usuario (con historial opcional en formato
  * MessageParam[] de Anthropic) y devuelve la respuesta final más la traza de tools ejecutadas.
  */
-export async function runClaudeChat(userMessage, history = []) {
+export async function runClaudeChat(userMessage, history = [], contexto = {}) {
   const messages = [...history, { role: 'user', content: userMessage }];
   const toolCalls = [];
 
@@ -47,7 +47,7 @@ export async function runClaudeChat(userMessage, history = []) {
       if (block.type !== 'tool_use') continue;
       let result;
       try {
-        result = await ejecutarTool(block.name, block.input);
+        result = await ejecutarTool(block.name, block.input, contexto);
       } catch (err) {
         result = { error: err.message };
       }

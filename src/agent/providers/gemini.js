@@ -9,7 +9,7 @@ const MODEL = process.env.GEMINI_MODEL || 'gemini-flash-latest';
  * Corre el loop del agente para un único mensaje de usuario (con historial opcional en formato
  * Content[] de Gemini) y devuelve la respuesta final más la traza de tools ejecutadas (auditoría).
  */
-export async function runGeminiChat(userMessage, history = []) {
+export async function runGeminiChat(userMessage, history = [], contexto = {}) {
   const chat = client.chats.create({
     model: MODEL,
     history,
@@ -39,7 +39,7 @@ export async function runGeminiChat(userMessage, history = []) {
     for (const fc of response.functionCalls) {
       let result;
       try {
-        result = await ejecutarTool(fc.name, fc.args);
+        result = await ejecutarTool(fc.name, fc.args, contexto);
       } catch (err) {
         result = { error: err.message };
       }

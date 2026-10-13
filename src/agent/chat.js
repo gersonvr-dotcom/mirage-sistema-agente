@@ -23,7 +23,7 @@ function fueEjecutada(toolCall) {
  * acumulando su consumo de tokens (con límite duro por conversación) y registrando en
  * auditoría cada acción de escritura que el agente ejecutó de verdad.
  */
-export async function runAgentChat(usuarioId, userMessage, providerSolicitado) {
+export async function runAgentChat(usuarioId, userMessage, providerSolicitado, contexto = {}) {
   const previa = await obtenerConversacion(usuarioId);
 
   // El historial de Gemini y Claude no son compatibles entre sí: si el usuario cambia de
@@ -49,7 +49,7 @@ export async function runAgentChat(usuarioId, userMessage, providerSolicitado) {
   }
 
   const historialPrevio = continuaConversacion ? previa.historial : [];
-  const { reply, toolCalls, history, usage } = await run(userMessage, historialPrevio);
+  const { reply, toolCalls, history, usage } = await run(userMessage, historialPrevio, contexto);
 
   const tokensInputTotal = (continuaConversacion ? previa.tokens_input : 0) + (usage?.inputTokens ?? 0);
   const tokensOutputTotal = (continuaConversacion ? previa.tokens_output : 0) + (usage?.outputTokens ?? 0);

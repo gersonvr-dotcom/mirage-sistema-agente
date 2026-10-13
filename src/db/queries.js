@@ -49,6 +49,7 @@ export async function buscarPorOP(numeroOp) {
             pr.codigo, pr.nombre AS producto, pr.formato, pr.unidad_medida,
             oi.acabado, oi.cajas, oi.m2_x_caja, oi.cantidad, oi.notas,
             oi.fecha_estimada_entrega, oi.estado AS estado_item,
+            oi.precio_unitario, oi.moneda, oi.descuento_pct, oi.importe_total,
             prov.nombre AS proveedor
        FROM ops o
        JOIN clientes c ON c.id = o.cliente_id
@@ -643,4 +644,70 @@ export async function agregarEtapaSeguimiento({ op_item_id, etapa, fecha_evento,
     await pool.query(`UPDATE op_items SET estado = ? WHERE id = ?`, [ESTADO_POR_ETAPA[etapa], op_item_id]);
   }
   return obtenerOP(item.op_id);
+}
+
+
+/**
+ * Cotizaciones (cabecera con totales) filtradas por número exacto o por cliente/proyecto (coincidencia parcial).
+ * Solo para quien puede ver precios: el filtro por rol lo aplica quien llama (ver src/agent/tools.js).
+ */
+export async function buscarCotizaciones({ numero, cliente, proyecto, limite = 15 } = {}) {
+  const where = [];
+  const params = [];
+  if (numero) { where.push('q.numero_cotizacion = ?'); params.push(String(numero).trim()); }
+  if (cliente) { where.push('c.nombre LIKE ?'); params.push(`%${cliente}%`); }
+  if (proyecto) { where.push('p.nombre LIKE ?'); params.push(`%${proyecto}%`); }
+  if (where.length === 0) return [];
+  const [rows] = await pool.query(
+    `SELECT q.id, q.numero_cotizacion, DATE_FORMAT(q.fecha, '%Y-%m-%d') AS fecha, q.estado, c.nombre AS cliente, p.nombre AS proyecto,
+            q.moneda, q.gran_total, q.descuento_total, q.descuento_pct, q.subtotal, q.transporte,
+            q.impuesto, q.total AS valor_total, q.anticipo_pct,
+            (SELECT COUNT(*) FROM cotizacion_items ci WHERE ci.cotizacion_id = q.id) AS num_lineas
+       FROM cotizaciones q
+       JOIN clientes c ON c.id = q.cliente_id
+       JOIN proyectos p ON p.id = q.proyecto_id
+      WHERE ${where.join(' AND ')}
+      ORDER BY q.fecha DESC, q.id DESC
+      LIMIT ?`,
+    [...params, Math.min(Math.max(Number(limite) || 15, 1), 50)]
+  );
+  return rows;
+}
+
+export async function lineasCotizacion(cotizacionId) {
+  const [rows] = await pool.query(
+    `SELECT orden, area, fabrica, linea_catalogo, cod_color, acabado, formato, descripcion,
+            cantidad, unidad_medida, cantidad_final, precio_unitario, concepto_precio, importe
+       FROM cotizacion_items
+      WHERE cotizacion_id = ?
+      ORDER BY orden`,
+    [cotizacionId]
+  );
+  return rows;
+}
+
+/**
+ * Precios de venta de un producto en las cotizaciones (más recientes primero). El texto se compara sin espacios
+ * contra línea + código/color + descripción, porque "EY 01" en una OP es "EY01" en la cotización.
+ */
+export async function historialPreciosProducto({ producto, cliente, limite = 40 } = {}) {
+  const compacto = String(producto ?? '').replace(/\s+/g, '');
+  if (!compacto) return [];
+  const params = [`%${compacto}%`];
+  let filtroCliente = '';
+  if (cliente) { filtroCliente = ' AND c.nombre LIKE ?'; params.push(`%${cliente}%`); }
+  const [rows] = await pool.query(
+    `SELECT q.numero_cotizacion, DATE_FORMAT(q.fecha, '%Y-%m-%d') AS fecha, c.nombre AS cliente, p.nombre AS proyecto, q.moneda,
+            ci.linea_catalogo, ci.cod_color, ci.acabado, ci.formato, ci.descripcion,
+            ci.cantidad_final, ci.unidad_medida, ci.precio_unitario, ci.concepto_precio
+       FROM cotizacion_items ci
+       JOIN cotizaciones q ON q.id = ci.cotizacion_id
+       JOIN clientes c ON c.id = q.cliente_id
+       JOIN proyectos p ON p.id = q.proyecto_id
+      WHERE REPLACE(CONCAT_WS('', ci.linea_catalogo, ci.cod_color, ci.descripcion), ' ', '') LIKE ?${filtroCliente}
+      ORDER BY q.fecha DESC, q.id DESC, ci.orden
+      LIMIT ?`,
+    [...params, Math.min(Math.max(Number(limite) || 40, 1), 100)]
+  );
+  return rows;
 }
