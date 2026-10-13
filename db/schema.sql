@@ -10,6 +10,8 @@ CREATE TABLE clientes (
   contacto      VARCHAR(150),
   email         VARCHAR(150),
   telefono      VARCHAR(50),
+  -- Tipo de cliente para filtrar rankings; 'interno' = la propia empresa/mercadeo, se excluye de métricas de venta.
+  tipo          ENUM('constructora','arquitecto','desarrollador','distribuidor','particular','interno') NULL,
   created_at    TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
@@ -70,11 +72,45 @@ CREATE TABLE cotizaciones (
   cliente_id          INT UNSIGNED NOT NULL,
   fecha               DATE NOT NULL,
   estado              ENUM('borrador','enviada','aprobada','rechazada') NOT NULL DEFAULT 'borrador',
+  -- `total` = VALOR TOTAL de la cotización (lo que paga el cliente: subtotal + impuesto).
   total               DECIMAL(14,2),
+  moneda              CHAR(3) NULL,            -- ISO: USD, CRC, EUR ('DOLARES' en el XLSX = USD)
+  gran_total          DECIMAL(14,2) NULL,      -- suma de líneas antes de descuento
+  descuento_total     DECIMAL(14,2) NULL,      -- monto de descuento global (la plantilla lo da como monto)
+  descuento_pct       DECIMAL(5,2) NULL,       -- descuento_total / gran_total * 100
+  subtotal            DECIMAL(14,2) NULL,      -- gran_total - descuento_total
+  impuesto            DECIMAL(14,2) NULL,      -- I.V.A (13% en las cotizaciones vistas)
+  anticipo_pct        DECIMAL(5,2) NULL,       -- ej. 50.00 (anticipo 50% / previo a entrega 50%)
   created_at          TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
   FOREIGN KEY (proyecto_id) REFERENCES proyectos(id),
   FOREIGN KEY (cliente_id) REFERENCES clientes(id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- Líneas de una cotización (precio de VENTA al cliente). El importe de línea = precio_unitario x cantidad_final
+-- (m2/pz finales tras redondear a cajas), no x la cantidad pedida.
+CREATE TABLE cotizacion_items (
+  id                INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  cotizacion_id     INT UNSIGNED NOT NULL,
+  orden             INT UNSIGNED NOT NULL,
+  area              VARCHAR(150) NULL,
+  fabrica           VARCHAR(80) NULL,
+  producto_id       INT UNSIGNED NULL,         -- NULL en ítems a medida (ej. sobres/muebles de baño)
+  linea_catalogo    VARCHAR(150) NULL,
+  cod_color         VARCHAR(80) NULL,
+  acabado           VARCHAR(60) NULL,
+  formato           VARCHAR(100) NULL,
+  descripcion       VARCHAR(255) NULL,
+  cantidad          DECIMAL(14,2) NULL,
+  unidad_medida     VARCHAR(30) NULL,
+  cantidad_final    DECIMAL(14,2) NULL,
+  precio_unitario   DECIMAL(14,4) NULL,
+  concepto_precio   VARCHAR(20) NOT NULL DEFAULT 'material',  -- 'material' | 'mano_obra' (columna "PRECIO MO")
+  importe           DECIMAL(14,2) NULL,
+  created_at        TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (cotizacion_id) REFERENCES cotizaciones(id) ON DELETE CASCADE,
+  FOREIGN KEY (producto_id) REFERENCES productos(id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+CREATE INDEX idx_cotizacion_items_cot ON cotizacion_items(cotizacion_id);
 
 CREATE TABLE pedidos (
   id                INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
@@ -123,6 +159,14 @@ CREATE TABLE op_items (
   m2_x_caja             DECIMAL(10,4),
   cantidad              DECIMAL(14,2) NOT NULL,
   notas                 VARCHAR(255),
+  -- Precio de VENTA (copiado de la línea de cotización equivalente). importe_total = neto de IVA y con el descuento aplicado.
+  precio_unitario       DECIMAL(14,4) NULL,
+  moneda                CHAR(3) NULL,
+  descuento_pct         DECIMAL(5,2) NULL,
+  importe_total         DECIMAL(14,2) NULL,
+  -- COSTO de fábrica (de la Proforma Invoice del proveedor); nunca se mezcla con el precio de venta.
+  costo_unitario        DECIMAL(14,4) NULL,
+  costo_moneda          CHAR(3) NULL,
   fecha_estimada_entrega DATE,
   estado                ENUM('pendiente','en_produccion','embarcado','en_aduana','en_bodega','entregado','cancelado') NOT NULL DEFAULT 'pendiente',
   created_at            TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,

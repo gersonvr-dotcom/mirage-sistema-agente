@@ -128,14 +128,24 @@ export async function materialPendiente({ cliente, proyecto } = {}) {
 }
 
 /** Lista de clientes (para selects/formularios), opcionalmente filtrada por nombre parcial. */
-export async function listarClientes({ q } = {}) {
+export async function listarClientes({ q, tipo } = {}) {
+  const where = [];
+  const params = [];
+  if (q) {
+    where.push('c.nombre LIKE ?');
+    params.push(`%${q}%`);
+  }
+  if (tipo) {
+    where.push('c.tipo = ?');
+    params.push(tipo);
+  }
   const [rows] = await pool.query(
-    `SELECT c.id, c.nombre, c.ruc_nit, c.contacto, c.email, c.telefono, c.created_at,
+    `SELECT c.id, c.nombre, c.ruc_nit, c.contacto, c.email, c.telefono, c.tipo, c.created_at,
             (SELECT COUNT(*) FROM proyectos p WHERE p.cliente_id = c.id) AS num_proyectos
        FROM clientes c
-      ${q ? 'WHERE c.nombre LIKE ?' : ''}
+      ${where.length ? `WHERE ${where.join(' AND ')}` : ''}
       ORDER BY c.nombre ASC`,
-    q ? [`%${q}%`] : []
+    params
   );
   return rows;
 }
@@ -143,26 +153,26 @@ export async function listarClientes({ q } = {}) {
 /** Un cliente por id. */
 export async function obtenerCliente(id) {
   const [[cliente]] = await pool.query(
-    `SELECT id, nombre, ruc_nit, contacto, email, telefono, created_at FROM clientes WHERE id = ?`,
+    `SELECT id, nombre, ruc_nit, contacto, email, telefono, tipo, created_at FROM clientes WHERE id = ?`,
     [id]
   );
   return cliente ?? null;
 }
 
 /** Crea un cliente y devuelve el registro creado. */
-export async function crearCliente({ nombre, ruc_nit, contacto, email, telefono }) {
+export async function crearCliente({ nombre, ruc_nit, contacto, email, telefono, tipo }) {
   const [result] = await pool.query(
-    `INSERT INTO clientes (nombre, ruc_nit, contacto, email, telefono) VALUES (?, ?, ?, ?, ?)`,
-    [nombre, ruc_nit || null, contacto || null, email || null, telefono || null]
+    `INSERT INTO clientes (nombre, ruc_nit, contacto, email, telefono, tipo) VALUES (?, ?, ?, ?, ?, ?)`,
+    [nombre, ruc_nit || null, contacto || null, email || null, telefono || null, tipo || null]
   );
   return obtenerCliente(result.insertId);
 }
 
 /** Actualiza un cliente existente y devuelve el registro actualizado (o null si no existe). */
-export async function actualizarCliente(id, { nombre, ruc_nit, contacto, email, telefono }) {
+export async function actualizarCliente(id, { nombre, ruc_nit, contacto, email, telefono, tipo }) {
   const [result] = await pool.query(
-    `UPDATE clientes SET nombre = ?, ruc_nit = ?, contacto = ?, email = ?, telefono = ? WHERE id = ?`,
-    [nombre, ruc_nit || null, contacto || null, email || null, telefono || null, id]
+    `UPDATE clientes SET nombre = ?, ruc_nit = ?, contacto = ?, email = ?, telefono = ?, tipo = ? WHERE id = ?`,
+    [nombre, ruc_nit || null, contacto || null, email || null, telefono || null, tipo || null, id]
   );
   if (result.affectedRows === 0) return null;
   return obtenerCliente(id);

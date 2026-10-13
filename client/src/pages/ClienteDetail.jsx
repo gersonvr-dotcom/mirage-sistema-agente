@@ -1,6 +1,7 @@
 import { useEffect, useState, useCallback } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { api } from '../api';
+import { etiquetaTipoCliente } from '../clienteTipos';
 
 export function ClienteDetail() {
   const { id } = useParams();
@@ -40,6 +41,10 @@ export function ClienteDetail() {
       {error && <p className="error">{error}</p>}
 
       <div className="op-header-card">
+        <div>
+          <span className="stat-label">Tipo</span>
+          <p>{etiquetaTipoCliente(cliente.tipo)}</p>
+        </div>
         <div>
           <span className="stat-label">RUC/NIT</span>
           <p>{cliente.ruc_nit || '—'}</p>

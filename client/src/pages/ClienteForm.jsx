@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { api } from '../api';
+import { TIPOS_CLIENTE } from '../clienteTipos';
 
-const FORM_INICIAL = { nombre: '', ruc_nit: '', contacto: '', email: '', telefono: '' };
+const FORM_INICIAL = { nombre: '', ruc_nit: '', contacto: '', email: '', telefono: '', tipo: '' };
 
 export function ClienteForm() {
   const { id } = useParams();
@@ -25,6 +26,7 @@ export function ClienteForm() {
           contacto: cliente.contacto ?? '',
           email: cliente.email ?? '',
           telefono: cliente.telefono ?? '',
+          tipo: cliente.tipo ?? '',
         })
       )
       .catch((err) => setError(err.message))
@@ -64,6 +66,17 @@ export function ClienteForm() {
           <label>
             Nombre
             <input value={form.nombre} onChange={(e) => update('nombre', e.target.value)} required />
+          </label>
+          <label>
+            Tipo de cliente
+            <select value={form.tipo} onChange={(e) => update('tipo', e.target.value)}>
+              <option value="">Sin clasificar</option>
+              {TIPOS_CLIENTE.map((t) => (
+                <option key={t.valor} value={t.valor}>
+                  {t.etiqueta}
+                </option>
+              ))}
+            </select>
           </label>
           <label>
             RUC/NIT

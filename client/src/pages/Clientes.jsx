@@ -2,10 +2,12 @@ import { useEffect, useState, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import { api } from '../api';
 import { useAuth } from '../AuthContext';
+import { TIPOS_CLIENTE, etiquetaTipoCliente } from '../clienteTipos';
 
 export function Clientes() {
   const [clientes, setClientes] = useState([]);
   const [q, setQ] = useState('');
+  const [tipo, setTipo] = useState('');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [confirmandoId, setConfirmandoId] = useState(null);
@@ -31,7 +33,7 @@ export function Clientes() {
 
   function handleSearch(e) {
     e.preventDefault();
-    cargar({ q });
+    cargar({ q, tipo });
   }
 
   async function handleDelete(id) {
@@ -39,7 +41,7 @@ export function Clientes() {
     try {
       await api.eliminarCliente(id);
       setConfirmandoId(null);
-      cargar({ q });
+      cargar({ q, tipo });
     } catch (err) {
       setConfirmandoId(null);
       setError(err.message);
@@ -56,6 +58,14 @@ export function Clientes() {
           value={q}
           onChange={(e) => setQ(e.target.value)}
         />
+        <select value={tipo} onChange={(e) => setTipo(e.target.value)}>
+          <option value="">Todos los tipos</option>
+          {TIPOS_CLIENTE.map((t) => (
+            <option key={t.valor} value={t.valor}>
+              {t.etiqueta}
+            </option>
+          ))}
+        </select>
         <button type="submit">Filtrar</button>
         <Link to="/clientes/nuevo" className="button-link">
           + Nuevo cliente
@@ -72,6 +82,7 @@ export function Clientes() {
           <thead>
             <tr>
               <th>Nombre</th>
+              <th>Tipo</th>
               <th>RUC/NIT</th>
               <th>Contacto</th>
               <th>Email</th>
@@ -86,6 +97,7 @@ export function Clientes() {
                 <td>
                   <Link to={`/clientes/${c.id}`}>{c.nombre}</Link>
                 </td>
+                <td>{etiquetaTipoCliente(c.tipo)}</td>
                 <td>{c.ruc_nit ?? '—'}</td>
                 <td>{c.contacto ?? '—'}</td>
                 <td>{c.email ?? '—'}</td>
@@ -126,7 +138,7 @@ export function Clientes() {
             ))}
             {clientes.length === 0 && (
               <tr>
-                <td colSpan={7}>No hay clientes.</td>
+                <td colSpan={8}>No hay clientes.</td>
               </tr>
             )}
           </tbody>
