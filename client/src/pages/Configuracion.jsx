@@ -1,66 +1,17 @@
-import { useEffect, useRef, useState } from 'react';
+import { useState } from 'react';
 import { api } from '../api';
+import { useJob } from '../hooks/useJob';
 import { NormalizarProyectos } from '../components/NormalizarProyectos';
-
-const POLL_MS = 4000;
 
 export function Configuracion() {
   const [sincronizandoExcel, setSincronizandoExcel] = useState(false);
   const [resultadoExcel, setResultadoExcel] = useState(null);
   const [errorExcel, setErrorExcel] = useState(null);
 
-  const [sincronizandoProductos, setSincronizandoProductos] = useState(false);
-  const [resultadoProductos, setResultadoProductos] = useState(null);
-  const [errorProductos, setErrorProductos] = useState(null);
-  const intervaloRef = useRef(null);
-
-  function detenerPolling() {
-    if (intervaloRef.current) {
-      clearInterval(intervaloRef.current);
-      intervaloRef.current = null;
-    }
-  }
-
-  function aplicarEstadoProductos(estado) {
-    if (estado.estado === 'completado') {
-      detenerPolling();
-      setResultadoProductos(estado.resultado);
-      setSincronizandoProductos(false);
-    } else if (estado.estado === 'error') {
-      detenerPolling();
-      setErrorProductos(estado.error);
-      setSincronizandoProductos(false);
-    } else if (estado.estado === 'corriendo') {
-      setSincronizandoProductos(true);
-    }
-  }
-
-  function iniciarPolling() {
-    detenerPolling();
-    intervaloRef.current = setInterval(async () => {
-      try {
-        const estado = await api.estadoSincronizacionProductos();
-        aplicarEstadoProductos(estado);
-      } catch (err) {
-        detenerPolling();
-        setErrorProductos(err.message);
-        setSincronizandoProductos(false);
-      }
-    }, POLL_MS);
-  }
-
-  useEffect(() => {
-    // Si la app se recargó mientras el sync seguía corriendo, retoma el estado en vez de
-    // perder de vista un job que sigue vivo en el servidor.
-    api
-      .estadoSincronizacionProductos()
-      .then((estado) => {
-        aplicarEstadoProductos(estado);
-        if (estado.estado === 'corriendo') iniciarPolling();
-      })
-      .catch(() => {});
-    return detenerPolling;
-  }, []);
+  const productos = useJob(api.sincronizarProductosOps, api.estadoSincronizacionProductos);
+  const cotizaciones = useJob(api.sincronizarCotizaciones, api.estadoSincronizacionCotizaciones);
+  const { ejecutando: sincronizandoProductos, resultado: resultadoProductos, error: errorProductos } = productos;
+  const sincronizarProductos = productos.iniciar;
 
   async function sincronizarExcel() {
     setSincronizandoExcel(true);
@@ -73,20 +24,6 @@ export function Configuracion() {
       setErrorExcel(err.message);
     } finally {
       setSincronizandoExcel(false);
-    }
-  }
-
-  async function sincronizarProductos() {
-    setErrorProductos(null);
-    setResultadoProductos(null);
-    setSincronizandoProductos(true);
-    try {
-      const estado = await api.sincronizarProductosOps();
-      aplicarEstadoProductos(estado);
-      if (estado.estado === 'corriendo') iniciarPolling();
-    } catch (err) {
-      setErrorProductos(err.message);
-      setSincronizandoProductos(false);
     }
   }
 
@@ -245,6 +182,99 @@ export function Configuracion() {
                   </thead>
                   <tbody>
                     {resultadoProductos.errores.map((e, i) => (
+                      <tr key={i}>
+                        <td>{e.op}</td>
+                        <td>{e.carpeta}</td>
+                        <td>{e.mensaje}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </>
+          )}
+        </>
+      )}
+
+      <h2 style={{ marginTop: 32 }}>Precios de cotizaciones</h2>
+      <p className="chat-empty">
+        Lee el XLSX de cotización de cada carpeta de OP en SharePoint y guarda en la base las líneas con su precio, el descuento,
+        el IVA, el transporte y el total, la fecha real y el anticipo; después copia el precio de venta y el proveedor (fábrica)
+        a las líneas de cada OP. Reemplaza las líneas de cotización en cada corrida; no modifica estados ni seguimiento de producción.
+        Puede tardar unos minutos: recorre una carpeta a la vez.
+      </p>
+
+      <div className="form-actions" style={{ margin: '16px 0' }}>
+        <button type="button" onClick={cotizaciones.iniciar} disabled={cotizaciones.ejecutando}>
+          {cotizaciones.ejecutando ? 'Sincronizando… (puede tardar unos minutos)' : 'Sincronizar ahora'}
+        </button>
+      </div>
+
+      {cotizaciones.error && <p className="error">{cotizaciones.error}</p>}
+
+      {cotizaciones.resultado && (
+        <>
+          <div className="stat-row">
+            {[
+              ['Carpetas revisadas', cotizaciones.resultado.carpetas_total],
+              ['Cotizaciones actualizadas', cotizaciones.resultado.cotizaciones_actualizadas],
+              ['Cotizaciones creadas', cotizaciones.resultado.cotizaciones_creadas],
+              ['Líneas de cotización guardadas', cotizaciones.resultado.lineas_guardadas],
+              ['Líneas de OP con precio', cotizaciones.resultado.items_con_precio],
+              ['Con varios precios posibles (sin precio)', cotizaciones.resultado.items_precio_ambiguo],
+              ['Sin línea equivalente en la cotización', cotizaciones.resultado.items_sin_coincidencia],
+              ['Líneas de OP con proveedor asignado', cotizaciones.resultado.items_con_proveedor],
+              ['Carpetas sin XLSX de cotización', cotizaciones.resultado.carpetas_sin_xlsx],
+              ['Cotizaciones que no se pudieron leer', cotizaciones.resultado.cotizaciones_sin_datos],
+              ['OPs no encontradas en la BD', cotizaciones.resultado.ops_no_encontradas],
+            ].map(([etiqueta, valor]) => (
+              <div className="stat-tile" key={etiqueta}>
+                <span className="stat-label">{etiqueta}</span>
+                <span className="stat-value">{valor}</span>
+              </div>
+            ))}
+          </div>
+
+          {cotizaciones.resultado.advertencias.length > 0 && (
+            <>
+              <h2>Para revisar ({cotizaciones.resultado.advertencias.length})</h2>
+              <div className="table-scroll">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>OP</th>
+                      <th>Cotización</th>
+                      <th>Aviso</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {cotizaciones.resultado.advertencias.map((a, i) => (
+                      <tr key={i}>
+                        <td>{a.op}</td>
+                        <td>{a.cotizacion}</td>
+                        <td>{a.mensaje}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </>
+          )}
+
+          {cotizaciones.resultado.errores.length > 0 && (
+            <>
+              <h2>Carpetas con error ({cotizaciones.resultado.errores.length})</h2>
+              <div className="table-scroll">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>OP</th>
+                      <th>Carpeta</th>
+                      <th>Error</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {cotizaciones.resultado.errores.map((e, i) => (
                       <tr key={i}>
                         <td>{e.op}</td>
                         <td>{e.carpeta}</td>

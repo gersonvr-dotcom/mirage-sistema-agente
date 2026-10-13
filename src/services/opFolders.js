@@ -4,15 +4,16 @@ import { obtenerAccessToken, encodeSharingUrl, graphGet, graphDescargarContenido
 const OP_EN_NOMBRE_RE = /^OP[-\s]+(\d{4}-\d+)/i;
 const ARCHIVO_OP_RE = /^OP[-\s].*\.xlsx$/i;
 
-function celdaTexto(valor) {
+export function celdaTexto(valor) {
   if (valor === null || valor === undefined) return null;
+  if (typeof valor === 'object' && Array.isArray(valor.richText)) return valor.richText.map((t) => t.text).join('').trim() || null;
   if (typeof valor === 'object' && 'text' in valor) return String(valor.text).trim() || null;
   if (typeof valor === 'object' && 'result' in valor) return celdaTexto(valor.result);
   const s = String(valor).trim();
   return s === '' ? null : s;
 }
 
-function celdaNumero(valor) {
+export function celdaNumero(valor) {
   if (valor === null || valor === undefined) return null;
   if (typeof valor === 'object' && 'result' in valor) return celdaNumero(valor.result);
   const n = Number(valor);

@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { sincronizarDesdeExcelMadre } from '../services/syncComercial.js';
 import { sincronizarProductosDesdeCarpetas } from '../services/syncProductos.js';
+import { sincronizarCotizacionesDesdeCarpetas } from '../services/syncCotizaciones.js';
 
 export const configRouter = Router();
 
@@ -14,30 +15,32 @@ configRouter.post('/sincronizar-excel', async (req, res) => {
   }
 });
 
-// Estado en memoria del job de sincronización de productos: recorre 267 carpetas de
-// SharePoint y puede tardar varios minutos, más de lo que aguanta el proxy de Plesk delante
-// del Node. Por eso corre en segundo plano: el POST solo lo dispara y responde al toque, y
-// el navegador consulta el progreso con el GET de abajo.
-let jobProductos = { estado: 'inactivo', resultado: null, error: null, iniciadoEn: null, terminadoEn: null };
+/**
+ * Trabajo en segundo plano con su estado en memoria. Recorrer las carpetas de SharePoint tarda varios minutos,
+ * más de lo que aguanta el proxy de Plesk delante del Node (504): el POST solo dispara el trabajo y responde al
+ * toque, y el navegador consulta el progreso con el GET de /estado. El estado vive en memoria: un reinicio lo corta.
+ */
+function registrarJob(ruta, ejecutar, mensajeError) {
+  let job = { estado: 'inactivo', resultado: null, error: null, iniciadoEn: null, terminadoEn: null };
 
-configRouter.post('/sincronizar-productos', (req, res) => {
-  if (jobProductos.estado === 'corriendo') {
-    return res.status(202).json(jobProductos);
-  }
+  configRouter.post(ruta, (req, res) => {
+    if (job.estado === 'corriendo') return res.status(202).json(job);
 
-  jobProductos = { estado: 'corriendo', resultado: null, error: null, iniciadoEn: new Date().toISOString(), terminadoEn: null };
-  res.status(202).json(jobProductos);
+    job = { estado: 'corriendo', resultado: null, error: null, iniciadoEn: new Date().toISOString(), terminadoEn: null };
+    res.status(202).json(job);
 
-  sincronizarProductosDesdeCarpetas()
-    .then((resultado) => {
-      jobProductos = { ...jobProductos, estado: 'completado', resultado, terminadoEn: new Date().toISOString() };
-    })
-    .catch((err) => {
-      console.error(err);
-      jobProductos = { ...jobProductos, estado: 'error', error: err.message, terminadoEn: new Date().toISOString() };
-    });
-});
+    ejecutar()
+      .then((resultado) => {
+        job = { ...job, estado: 'completado', resultado, terminadoEn: new Date().toISOString() };
+      })
+      .catch((err) => {
+        console.error(mensajeError, err);
+        job = { ...job, estado: 'error', error: err.message, terminadoEn: new Date().toISOString() };
+      });
+  });
 
-configRouter.get('/sincronizar-productos/estado', (req, res) => {
-  res.json(jobProductos);
-});
+  configRouter.get(`${ruta}/estado`, (req, res) => res.json(job));
+}
+
+registrarJob('/sincronizar-productos', sincronizarProductosDesdeCarpetas, 'Falló la sincronización de productos:');
+registrarJob('/sincronizar-cotizaciones', sincronizarCotizacionesDesdeCarpetas, 'Falló la sincronización de cotizaciones:');

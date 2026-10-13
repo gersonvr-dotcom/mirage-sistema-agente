@@ -79,7 +79,8 @@ CREATE TABLE cotizaciones (
   descuento_total     DECIMAL(14,2) NULL,      -- monto de descuento global (la plantilla lo da como monto)
   descuento_pct       DECIMAL(5,2) NULL,       -- descuento_total / gran_total * 100
   subtotal            DECIMAL(14,2) NULL,      -- gran_total - descuento_total
-  impuesto            DECIMAL(14,2) NULL,      -- I.V.A (13% en las cotizaciones vistas)
+  impuesto            DECIMAL(14,2) NULL,      -- I.V.A (13% en las cotizaciones vistas; 0 si dice EXONERADO)
+  transporte          DECIMAL(14,2) NULL,      -- cargo de transporte entre el SUBTOTAL y el VALOR TOTAL (algunas cotizaciones)
   anticipo_pct        DECIMAL(5,2) NULL,       -- ej. 50.00 (anticipo 50% / previo a entrega 50%)
   created_at          TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
   FOREIGN KEY (proyecto_id) REFERENCES proyectos(id),

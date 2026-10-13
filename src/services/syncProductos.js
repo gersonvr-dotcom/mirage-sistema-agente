@@ -1,11 +1,11 @@
 import { pool } from '../db/pool.js';
 import { listarCarpetasOP, obtenerCotizacionYLineas } from './opFolders.js';
 
-function normTexto(s) {
+export function normTexto(s) {
   return String(s ?? '').trim().replace(/\s+/g, ' ');
 }
 
-function codigoProducto(lineaCatalogo, codColor) {
+export function codigoProducto(lineaCatalogo, codColor) {
   const linea = normTexto(lineaCatalogo);
   const cod = normTexto(codColor);
   return cod ? `${linea}-${cod}` : linea;

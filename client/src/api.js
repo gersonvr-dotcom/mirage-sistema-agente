@@ -90,4 +90,6 @@ export const api = {
   sincronizarExcelMadre: () => request('/config/sincronizar-excel', { method: 'POST' }),
   sincronizarProductosOps: () => request('/config/sincronizar-productos', { method: 'POST' }),
   estadoSincronizacionProductos: () => request('/config/sincronizar-productos/estado'),
+  sincronizarCotizaciones: () => request('/config/sincronizar-cotizaciones', { method: 'POST' }),
+  estadoSincronizacionCotizaciones: () => request('/config/sincronizar-cotizaciones/estado'),
 };
