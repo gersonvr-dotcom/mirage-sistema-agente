@@ -717,6 +717,15 @@ export async function historialPreciosProducto({ producto, cliente, limite = 40 
 
 
 /** Documentos indexados de una OP (SharePoint). `tipos` limita los tipos devueltos (ver clasificadorDocumentos.js). */
+/** OP por cualquiera de los números candidatos (el primero que exista) con sus documentos, o null si no existe. */
+export async function documentosDeOPPorNumero(candidatos, { tipos } = {}) {
+  if (!candidatos.length) return null;
+  const [filas] = await pool.query('SELECT id, numero_op FROM ops WHERE numero_op IN (?)', [candidatos]);
+  const op = candidatos.map((c) => filas.find((f) => f.numero_op.toUpperCase() === c)).find(Boolean);
+  if (!op) return null;
+  return { numero_op: op.numero_op, documentos: await listarDocumentosOP(op.id, { tipos }) };
+}
+
 export async function listarDocumentosOP(opId, { tipos } = {}) {
   const filtro = tipos?.length ? ' AND tipo IN (?)' : '';
   const [rows] = await pool.query(

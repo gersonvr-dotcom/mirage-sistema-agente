@@ -17,7 +17,7 @@ export const ESQUEMA_PI = {
     },
     proveedor: { ...TXT, description: 'Quien emite el documento (vendedor).' },
     cliente: { ...TXT, description: 'A quien va dirigido (comprador).' },
-    numero_documento: TXT,
+    numero_documento: { ...TXT, description: 'Número de la proforma (ej. 22703 o P-26706/26), no la palabra "PROFORMA".' },
     fecha: { ...TXT, description: 'Fecha del documento en formato YYYY-MM-DD.' },
     referencia_pedido: { ...TXT, description: 'Referencia de pedido/orden que figura en el documento, tal cual.' },
     moneda: { ...TXT, description: 'Código ISO: EUR, USD, ...' },

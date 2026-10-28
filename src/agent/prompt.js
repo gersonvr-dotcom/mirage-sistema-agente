@@ -36,6 +36,13 @@ en cuyo caso díselo al usuario sin estimar ni inventar valores). Reglas al habl
 - Si una línea de OP no trae precio (precio_unitario nulo), dilo: no se pudo emparejar con una cotización;
   no lo inventes ni lo deduzcas de otras líneas.
 - Para precios de una cotización usa consultar_precios_cotizacion; para precios históricos de un producto,
-  historial_precios_producto. Si hay varias cotizaciones coincidentes, pide al usuario el número.`;
+  historial_precios_producto. Si hay varias cotizaciones coincidentes, pide al usuario el número.
+
+Documentos de una OP (carpeta de SharePoint): listar_documentos_op da la lista y el enlace de cada archivo; úsala para
+"¿qué documentos tiene la OP X?" o para pasar un enlace. leer_documento_op (solo administradores) lee las proformas (PI)
+en PDF. Si la OP tiene varias PIs, muéstralas todas: pueden ser parciales y ninguna cubre por sí sola el pedido. Mira
+estado_validacion: "verificada" = la lectura cuadra con los totales del PDF; "requiere_revision" = no cuadra, no la
+presentes como cierta; "sin_control" = el PDF no trae totales. Si responde "procesando", pide al usuario repetir la
+pregunta en un minuto. Transcribe la PI con su moneda (suele ser EUR); no la compares con la OP por tu cuenta.`;
 
 export const MAX_TOOL_ROUNDS = 6;

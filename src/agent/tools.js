@@ -18,6 +18,7 @@ import { rankingClientesPorM2, volumenTotalVendido, AGRUPACIONES_VALIDAS, METRIC
 import { TIPOS_CLIENTE } from '../db/clienteTipos.js';
 import { buscarProyectosSimilares } from '../services/proyectosSimilares.js';
 import { puedeVerPrecios, sinCamposDePrecio } from '../services/permisosPrecios.js';
+import { listarDocumentosOP, leerDocumentoOP } from './toolsDocumentos.js';
 
 export { puedeVerPrecios, sinCamposDePrecio };
 
@@ -204,6 +205,31 @@ export const TOOL_DEFINITIONS = [
     },
   },
   {
+    name: 'listar_documentos_op',
+    description: 'Lista los documentos de una OP guardados en su carpeta de SharePoint (cotización, OP, proforma/PI, factura, nota de crédito, boleta, pago, orden de compra, imagen): tipo, nombre, fecha y enlace para abrirlos. Muestra también cuántos hay por tipo. El rol operador solo ve tipos op, boleta e imagen. Úsala para "¿qué documentos tiene la OP X?" o para dar el enlace de un archivo.',
+    parametersJsonSchema: {
+      type: 'object',
+      properties: {
+        numero_op: { type: 'string', description: 'Número de OP, por ejemplo "2026-001".' },
+        tipo: { type: 'string', enum: ['cotizacion', 'op', 'pi', 'factura', 'nota_credito', 'boleta', 'pago', 'orden_compra', 'imagen', 'otro'], description: 'Opcional: solo documentos de este tipo.' },
+      },
+      required: ['numero_op'],
+    },
+  },
+  {
+    name: 'leer_documento_op',
+    description: 'SOLO ADMINISTRADORES. Lee el contenido de las proformas invoice (PI) en PDF de una OP: proveedor, número de PI, fecha, moneda, incoterm, líneas (código, acabado, formato, cantidad, cajas, m2, precio, importe) y totales, más si la lectura cuadra con los totales del PDF (estado_validacion). Si la OP tiene varias PIs lee todas (pueden ser parciales). Puede tardar; si responde "procesando", dile al usuario que repita la pregunta en un minuto. No compara contra la OP: solo transcribe la PI.',
+    parametersJsonSchema: {
+      type: 'object',
+      properties: {
+        numero_op: { type: 'string', description: 'Número de OP, por ejemplo "2026-001".' },
+        tipo: { type: 'string', enum: ['pi'], description: 'Tipo de documento; por ahora solo "pi".' },
+        nombre: { type: 'string', description: 'Opcional: parte del nombre del archivo para leer solo una PI (ej. "72018" o "-A").' },
+      },
+      required: ['numero_op'],
+    },
+  },
+  {
     name: 'crear_proyecto',
     description:
       'Crea un nuevo proyecto (una OBRA) para un cliente. Los pedidos adicionales, de perfiles o de enchape de una obra ' +
@@ -295,6 +321,10 @@ export async function ejecutarTool(name, input, ctx = {}) {
       });
     case 'historial_precios_producto':
       return puedeVerPrecios(ctx) ? historialPreciosProducto(input) : SIN_PERMISO_PRECIOS;
+    case 'listar_documentos_op':
+      return listarDocumentosOP(input, ctx);
+    case 'leer_documento_op':
+      return leerDocumentoOP(input, ctx);
     case 'consultar_cliente':
       return buscarPorCliente(input.nombre_cliente);
     case 'consultar_producto':
