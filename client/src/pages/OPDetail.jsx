@@ -4,6 +4,19 @@ import { api } from '../api';
 import { useAuth } from '../AuthContext';
 import { etiquetaTipoPedido } from '../pedidoTipos';
 
+const TIPOS_DOCUMENTO = {
+  pi: 'Proforma Invoice (PI)',
+  cotizacion: 'Cotización',
+  op: 'Orden de producción',
+  factura: 'Factura',
+  nota_credito: 'Nota de crédito',
+  boleta: 'Boleta de entrega',
+  pago: 'Pagos y validaciones',
+  orden_compra: 'Orden de compra del cliente',
+  imagen: 'Imágenes',
+  otro: 'Otros',
+};
+
 const ESTADOS_OP = ['abierta', 'en_produccion', 'en_transito', 'cerrada', 'cancelada'];
 const ESTADOS_ITEM = ['pendiente', 'en_produccion', 'embarcado', 'en_aduana', 'en_bodega', 'entregado', 'cancelado'];
 const ETAPAS = ['produccion', 'embarque', 'aduana', 'bodega', 'entrega'];
@@ -57,6 +70,7 @@ export function OPDetail() {
   const [etapaForm, setEtapaForm] = useState({ etapa: 'produccion', fecha_evento: '', nota: '' });
 
   const [confirmandoBorrarOP, setConfirmandoBorrarOP] = useState(false);
+  const [documentos, setDocumentos] = useState([]);
 
   async function cargar() {
     setLoading(true);
@@ -73,6 +87,7 @@ export function OPDetail() {
 
   useEffect(() => {
     cargar();
+    api.documentosOP(id).then(({ documentos }) => setDocumentos(documentos)).catch(() => {});
     api.productos().then(({ productos }) => setProductos(productos)).catch(() => {});
     api.proveedores().then(({ proveedores }) => setProveedores(proveedores)).catch(() => {});
   }, [id]);
@@ -522,6 +537,42 @@ export function OPDetail() {
             </button>
           </div>
         </form>
+      )}
+
+      <h2 style={{ marginTop: 32 }}>Documentos en SharePoint</h2>
+      {documentos.length === 0 ? (
+        <p className="chat-empty">
+          No hay documentos indexados para esta OP{esAdmin ? ' (se cargan desde Configuración → Documentos de las OPs).' : '.'}
+        </p>
+      ) : (
+        Object.entries(TIPOS_DOCUMENTO).map(([tipo, titulo]) => {
+          const lista = documentos.filter((d) => d.tipo === tipo);
+          if (lista.length === 0) return null;
+          return (
+            <details key={tipo} className="op-documentos" open={['pi', 'cotizacion', 'factura'].includes(tipo)}>
+              <summary>
+                {titulo} ({lista.length})
+              </summary>
+              <ul>
+                {lista.map((d) => (
+                  <li key={d.id}>
+                    {d.web_url ? (
+                      <a href={d.web_url} target="_blank" rel="noopener noreferrer">
+                        {d.nombre_archivo}
+                      </a>
+                    ) : (
+                      d.nombre_archivo
+                    )}{' '}
+                    <span className="chat-empty">
+                      {d.modificado ?? ''}
+                      {d.subcarpeta ? ` · ${d.subcarpeta}` : ''}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            </details>
+          );
+        })
       )}
     </div>
   );

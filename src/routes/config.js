@@ -2,6 +2,7 @@ import { Router } from 'express';
 import { sincronizarDesdeExcelMadre } from '../services/syncComercial.js';
 import { sincronizarProductosDesdeCarpetas } from '../services/syncProductos.js';
 import { sincronizarCotizacionesDesdeCarpetas } from '../services/syncCotizaciones.js';
+import { sincronizarDocumentosDesdeCarpetas } from '../services/syncDocumentos.js';
 
 export const configRouter = Router();
 
@@ -44,3 +45,4 @@ function registrarJob(ruta, ejecutar, mensajeError) {
 
 registrarJob('/sincronizar-productos', sincronizarProductosDesdeCarpetas, 'Falló la sincronización de productos:');
 registrarJob('/sincronizar-cotizaciones', sincronizarCotizacionesDesdeCarpetas, 'Falló la sincronización de cotizaciones:');
+registrarJob('/sincronizar-documentos', sincronizarDocumentosDesdeCarpetas, 'Falló la indexación de documentos:');

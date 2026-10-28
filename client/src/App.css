@@ -727,3 +727,17 @@ td {
   opacity: 0.75;
   background: transparent;
 }
+
+.op-documentos {
+  margin: 6px 0;
+}
+
+.op-documentos summary {
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.op-documentos ul {
+  margin: 6px 0 6px 4px;
+  padding-left: 18px;
+}

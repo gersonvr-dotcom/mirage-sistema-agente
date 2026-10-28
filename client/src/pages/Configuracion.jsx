@@ -10,6 +10,7 @@ export function Configuracion() {
 
   const productos = useJob(api.sincronizarProductosOps, api.estadoSincronizacionProductos);
   const cotizaciones = useJob(api.sincronizarCotizaciones, api.estadoSincronizacionCotizaciones);
+  const documentos = useJob(api.sincronizarDocumentos, api.estadoSincronizacionDocumentos);
   const { ejecutando: sincronizandoProductos, resultado: resultadoProductos, error: errorProductos } = productos;
   const sincronizarProductos = productos.iniciar;
 
@@ -281,6 +282,72 @@ export function Configuracion() {
                     {cotizaciones.resultado.errores.map((e, i) => (
                       <tr key={i}>
                         <td>{e.op}</td>
+                        <td>{e.carpeta}</td>
+                        <td>{e.mensaje}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </>
+          )}
+        </>
+      )}
+
+      <h2 style={{ marginTop: 32 }}>Documentos de las OPs</h2>
+      <p className="chat-empty">
+        Lista los archivos de cada carpeta de OP en SharePoint (cotización, PI, factura, nota de crédito, boleta de entrega, pagos,
+        órdenes de compra, imágenes) y los guarda como índice con su enlace. No descarga ni modifica nada en SharePoint; volver a
+        ejecutarlo no duplica, solo agrega lo nuevo, actualiza lo que cambió y quita lo que ya no está. Tarda menos de un minuto.
+      </p>
+
+      <div className="form-actions" style={{ margin: '16px 0' }}>
+        <button type="button" onClick={documentos.iniciar} disabled={documentos.ejecutando}>
+          {documentos.ejecutando ? 'Indexando…' : 'Indexar ahora'}
+        </button>
+      </div>
+
+      {documentos.error && <p className="error">{documentos.error}</p>}
+
+      {documentos.resultado && (
+        <>
+          <div className="stat-row">
+            {[
+              ['Carpetas revisadas', documentos.resultado.carpetas_total],
+              ['Carpetas indexadas', documentos.resultado.carpetas_procesadas],
+              ['Carpetas sin OP en la base', documentos.resultado.carpetas_sin_op_en_la_base],
+              ['Documentos nuevos', documentos.resultado.documentos_nuevos],
+              ['Documentos actualizados', documentos.resultado.documentos_actualizados],
+              ['Sin cambios', documentos.resultado.documentos_sin_cambios],
+              ['Quitados del índice', documentos.resultado.documentos_eliminados_del_indice],
+            ].map(([etiqueta, valor]) => (
+              <div className="stat-tile" key={etiqueta}>
+                <span className="stat-label">{etiqueta}</span>
+                <span className="stat-value">{valor}</span>
+              </div>
+            ))}
+          </div>
+          <p className="chat-empty">
+            Por tipo:{' '}
+            {Object.entries(documentos.resultado.por_tipo)
+              .sort((a, b) => b[1] - a[1])
+              .map(([tipo, n]) => `${tipo.replace('_', ' ')} ${n}`)
+              .join(' · ')}
+          </p>
+          {documentos.resultado.errores.length > 0 && (
+            <>
+              <h2>Carpetas con error ({documentos.resultado.errores.length})</h2>
+              <div className="table-scroll">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>Carpeta</th>
+                      <th>Error</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {documentos.resultado.errores.map((e, i) => (
+                      <tr key={i}>
                         <td>{e.carpeta}</td>
                         <td>{e.mensaje}</td>
                       </tr>

@@ -9,10 +9,13 @@ import {
   actualizarOPItem,
   eliminarOPItem,
   agregarEtapaSeguimiento,
+  listarDocumentosOP,
 } from '../db/queries.js';
 import { requireRole } from '../middleware/requireRole.js';
 import { opSegunRol } from '../services/permisosPrecios.js';
 import { TIPOS_PEDIDO } from '../db/pedidoTipos.js';
+import { puedeVerPrecios } from '../services/permisosPrecios.js';
+import { TIPOS_DOCUMENTO_VISIBLES_OPERADOR } from '../services/clasificadorDocumentos.js';
 
 export const opsRouter = Router();
 
@@ -24,6 +27,17 @@ opsRouter.get('/', async (req, res) => {
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'No se pudo listar las OPs.', detail: err.message });
+  }
+});
+
+// Los documentos financieros (cotizaciones, PIs, facturas, pagos…) traen montos y costos: solo el administrador los ve.
+opsRouter.get('/:id/documentos', async (req, res) => {
+  try {
+    const tipos = puedeVerPrecios({ rol: req.user.rol }) ? undefined : TIPOS_DOCUMENTO_VISIBLES_OPERADOR;
+    res.json({ documentos: await listarDocumentosOP(req.params.id, { tipos }) });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'No se pudieron listar los documentos de la OP.', detail: err.message });
   }
 });
 

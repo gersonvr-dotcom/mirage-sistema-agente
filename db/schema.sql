@@ -188,6 +188,31 @@ CREATE TABLE seguimiento_etapas (
   FOREIGN KEY (op_item_id) REFERENCES op_items(id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
+-- Índice de los archivos de cada carpeta de OP en SharePoint (no guarda el contenido: solo nombre, tipo, enlace y
+-- metadatos). `extraccion_json`/`extraido_en` son la caché de lo que el agente lea de un PDF (PI, cotización PDF);
+-- se invalida sola cuando cambia el etag del archivo. La clave (drive_id, item_id) evita duplicados al re-sincronizar.
+CREATE TABLE documentos_op (
+  id              INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  op_id           INT UNSIGNED NOT NULL,
+  tipo            VARCHAR(20) NOT NULL,          -- cotizacion | op | pi | factura | nota_credito | boleta | pago | orden_compra | imagen | otro
+  extension       VARCHAR(10) NOT NULL DEFAULT '',
+  nombre_archivo  VARCHAR(300) NOT NULL,
+  carpeta         VARCHAR(255) NOT NULL,         -- nombre de la carpeta de OP (hay números de OP con dos carpetas)
+  subcarpeta      VARCHAR(255) NULL,
+  drive_id        VARCHAR(150) NOT NULL,
+  item_id         VARCHAR(100) NOT NULL,
+  web_url         VARCHAR(1000) NULL,
+  tamano          BIGINT UNSIGNED NULL,
+  modificado_en   DATETIME NULL,
+  etag            VARCHAR(100) NULL,
+  extraido_en     DATETIME NULL,
+  extraccion_json LONGTEXT NULL,
+  created_at      TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE KEY uq_documentos_op_item (drive_id, item_id),
+  KEY idx_documentos_op_op (op_id, tipo),
+  FOREIGN KEY (op_id) REFERENCES ops(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
 -- Memoria de conversación del agente: una conversación activa por usuario, con el historial
 -- crudo del proveedor (Gemini o Claude) y el consumo acumulado de tokens.
 CREATE TABLE conversaciones_agente (

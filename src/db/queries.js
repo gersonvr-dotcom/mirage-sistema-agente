@@ -714,3 +714,19 @@ export async function historialPreciosProducto({ producto, cliente, limite = 40 
   );
   return rows;
 }
+
+
+/** Documentos indexados de una OP (SharePoint). `tipos` limita los tipos devueltos (ver clasificadorDocumentos.js). */
+export async function listarDocumentosOP(opId, { tipos } = {}) {
+  const filtro = tipos?.length ? ' AND tipo IN (?)' : '';
+  const [rows] = await pool.query(
+    `SELECT id, tipo, extension, nombre_archivo, carpeta, subcarpeta, web_url, tamano,
+            DATE_FORMAT(modificado_en, '%Y-%m-%d') AS modificado, (extraido_en IS NOT NULL) AS extraido
+       FROM documentos_op
+      WHERE op_id = ?${filtro}
+      ORDER BY FIELD(tipo, 'pi', 'cotizacion', 'op', 'factura', 'nota_credito', 'boleta', 'pago', 'orden_compra', 'imagen', 'otro'),
+               nombre_archivo`,
+    tipos?.length ? [opId, tipos] : [opId]
+  );
+  return rows.map((r) => ({ ...r, extraido: !!r.extraido }));
+}
