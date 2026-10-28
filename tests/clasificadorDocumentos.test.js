@@ -7,6 +7,8 @@ const casos = [
   ['PI 22703 OP 2025-001.PDF', 'pi'],
   ['pi 21651 op 2026-004.pdf', 'pi'],
   ['PROFORMA 123.pdf', 'pi'],
+  ['PROFORMA 26070801_CLIENTE _OP.2026-153_ADELANTO 2.pdf', 'pago'],
+  ['Proforma SO _10367 _ 50_ anticipo.pdf', 'pi'],
   ['FAC 3075.pdf', 'factura'],
   ['FACTURA 3118 CLIENTE.pdf', 'factura'],
   ['NC 458.pdf', 'nota_credito'],

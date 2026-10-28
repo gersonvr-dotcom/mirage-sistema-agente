@@ -28,6 +28,8 @@ export function clasificarDocumento(nombre, { subcarpeta = null } = {}) {
   const n = claveTexto(String(nombre ?? '').replace(/\.[A-Za-z0-9]{1,5}$/, ''));
   const ext = extensionDe(nombre);
 
+  // Un recibo de adelanto puede llamarse "PROFORMA <nº de recibo> ... ADELANTO" y no es una Proforma Invoice del proveedor.
+  if (/^PROFORMA\b/.test(n) && /\b(ADELANTO|RECIBO)\b/.test(n)) return 'pago';
   if (/^PI\b/.test(n) || /^PROFORMA\b/.test(n)) return 'pi';
   if (subcarpeta && /\bPROFORMA\b/.test(claveTexto(subcarpeta)) && ext === 'pdf') return 'pi';
   if (/^FAC/.test(n)) return 'factura';
