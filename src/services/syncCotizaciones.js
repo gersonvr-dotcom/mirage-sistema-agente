@@ -2,7 +2,8 @@ import { pool } from '../db/pool.js';
 import { listarCarpetasOP } from './opFolders.js';
 import { obtenerCotizacionXlsx } from './cotizacionFolders.js';
 import { codigoProducto, normTexto } from './syncProductos.js';
-import { claveTexto, distancia } from './proyectoNormalizer.js';
+import { claveTexto } from './proyectoNormalizer.js';
+import { buscarProveedorParecido, crearResolvedorProveedores, fabricaUnica } from './proveedores.js';
 
 const TOLERANCIA_CANTIDAD = 0.011;
 const MAX_ADVERTENCIAS = 60;
@@ -14,19 +15,7 @@ export const claveItem = (codigoOTexto, acabado) => `${compacta(codigoOTexto)}|$
 // Los textos de una cotización a medida pueden superar el tamaño de la columna.
 const corta = (valor, max) => (valor === null || valor === undefined ? null : String(valor).slice(0, max));
 
-/** Reutiliza un proveedor existente si el nombre es igual o casi igual (typo o letras cambiadas de lugar: MIRGAE ≈ MIRAGE). */
-export function buscarProveedorParecido(nombre, proveedores) {
-  const k = compacta(nombre);
-  const letras = (x) => [...x].sort().join('');
-  return (
-    proveedores.find((p) => {
-      const pk = compacta(p.nombre);
-      if (pk === k) return true;
-      if (Math.min(pk.length, k.length) < 5) return false;
-      return letras(pk) === letras(k) || distancia(pk, k) <= 1;
-    }) ?? null
-  );
-}
+export { buscarProveedorParecido };
 
 /**
  * Empareja las líneas de una OP (op_items) con las líneas de su cotización para copiarles el precio.
@@ -93,13 +82,12 @@ export async function sincronizarCotizacionesDesdeCarpetas() {
   };
 
   const productoCache = new Map();
-  const proveedorCache = new Map();
   const conn = await pool.getConnection();
   try {
-    const [proveedoresExistentes] = await conn.query('SELECT id, nombre FROM proveedores');
+    const proveedores = crearResolvedorProveedores(conn);
     for (const carpeta of carpetas) {
       try {
-        const [[op]] = await conn.query('SELECT id, proyecto_id, cliente_id, fecha_emision, cotizacion_id FROM ops WHERE numero_op = ?', [carpeta.numeroOp]);
+        const [[op]] = await conn.query('SELECT id, proyecto_id, cliente_id, fecha_emision, cotizacion_id, fabrica FROM ops WHERE numero_op = ?', [carpeta.numeroOp]);
         if (!op) {
           stats.ops_no_encontradas++;
           continue;
@@ -208,19 +196,16 @@ export async function sincronizarCotizacionesDesdeCarpetas() {
           ]);
           stats.items_con_precio++;
 
-          const fabrica = normTexto(linea.fabrica).toUpperCase().slice(0, 150);
-          if (fabrica && !item.proveedor_id) {
-            if (!proveedorCache.has(fabrica)) {
-              const parecido = buscarProveedorParecido(fabrica, proveedoresExistentes);
-              if (parecido) proveedorCache.set(fabrica, parecido.id);
-              else {
-                const nuevoId = (await conn.query('INSERT INTO proveedores (nombre) VALUES (?)', [fabrica]))[0].insertId;
-                proveedoresExistentes.push({ id: nuevoId, nombre: fabrica });
-                proveedorCache.set(fabrica, nuevoId);
-              }
+          // La FÁBRICA de la línea de la cotización manda sobre la del encabezado de la OP (que solo es un respaldo):
+          // se asigna si la línea no tenía proveedor o si su proveedor es el que vino del encabezado.
+          const fabricaLinea = fabricaUnica(linea.fabrica);
+          if (fabricaLinea) {
+            const proveedorId = await proveedores.resolver(fabricaLinea);
+            const deEncabezado = fabricaUnica(op.fabrica) ? await proveedores.resolver(op.fabrica) : null;
+            if (item.proveedor_id !== proveedorId && (!item.proveedor_id || item.proveedor_id === deEncabezado)) {
+              await conn.query('UPDATE op_items SET proveedor_id = ? WHERE id = ?', [proveedorId, item.id]);
+              stats.items_con_proveedor++;
             }
-            await conn.query('UPDATE op_items SET proveedor_id = ? WHERE id = ?', [proveedorCache.get(fabrica), item.id]);
-            stats.items_con_proveedor++;
           }
         }
 
@@ -229,9 +214,7 @@ export async function sincronizarCotizacionesDesdeCarpetas() {
         await conn.rollback().catch(() => {});
         // Los cachés pudieron guardar ids creados dentro de la transacción que se deshizo.
         productoCache.clear();
-        proveedorCache.clear();
-        proveedoresExistentes.length = 0;
-        proveedoresExistentes.push(...(await conn.query('SELECT id, nombre FROM proveedores'))[0]);
+        proveedores.reiniciar();
         stats.errores.push({ op: carpeta.numeroOp, carpeta: carpeta.name, mensaje: err.message });
       }
     }

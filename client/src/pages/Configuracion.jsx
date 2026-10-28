@@ -171,6 +171,18 @@ export function Configuracion() {
               <span className="stat-label">Líneas insertadas</span>
               <span className="stat-value">{resultadoProductos.lineas_insertadas}</span>
             </div>
+            <div className="stat-tile">
+              <span className="stat-label">Formatos completados</span>
+              <span className="stat-value">{resultadoProductos.formatos_completados}</span>
+            </div>
+            <div className="stat-tile">
+              <span className="stat-label">OPs con fábrica en el encabezado</span>
+              <span className="stat-value">{resultadoProductos.ops_con_fabrica}</span>
+            </div>
+            <div className="stat-tile">
+              <span className="stat-label">Líneas que recibieron proveedor</span>
+              <span className="stat-value">{resultadoProductos.proveedores_completados}</span>
+            </div>
           </div>
 
           {resultadoProductos.errores.length > 0 && (

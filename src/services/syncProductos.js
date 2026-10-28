@@ -1,5 +1,6 @@
 import { pool } from '../db/pool.js';
 import { listarCarpetasOP, obtenerCotizacionYLineas } from './opFolders.js';
+import { crearResolvedorProveedores, normalizarFabrica, fabricaUnica } from './proveedores.js';
 
 export function normTexto(s) {
   return String(s ?? '').trim().replace(/\s+/g, ' ');
@@ -64,10 +65,13 @@ export async function sincronizarProductosDesdeCarpetas() {
     cotizaciones_creadas: 0,
     lineas_insertadas: 0,
     formatos_completados: 0,
+    ops_con_fabrica: 0,
+    proveedores_completados: 0,
     errores: [],
   };
 
   const conn = await pool.getConnection();
+  const proveedores = crearResolvedorProveedores(conn);
   try {
     for (const carpeta of carpetas) {
       try {
@@ -89,6 +93,15 @@ export async function sincronizarProductosDesdeCarpetas() {
         }
 
         await conn.beginTransaction();
+
+        // 'Fábrica' del encabezado: se guarda tal cual en la OP y, si es una sola fábrica, sirve de respaldo del proveedor
+        // de las líneas que la cotización no haya asignado (el sync de precios deja que la FÁBRICA de cada línea mande).
+        const fabricaOp = normalizarFabrica(datos.fabrica);
+        if (fabricaOp) {
+          await conn.query('UPDATE ops SET fabrica = ? WHERE id = ?', [fabricaOp, op.id]);
+          stats.ops_con_fabrica++;
+        }
+        const proveedorRespaldo = fabricaUnica(fabricaOp) ? await proveedores.resolver(fabricaOp) : null;
 
         if (datos.numeroCotizacion) {
           const [existentes] = await conn.query(
@@ -150,6 +163,10 @@ export async function sincronizarProductosDesdeCarpetas() {
               stats.formatos_completados++;
             }
           }
+          if (proveedorRespaldo) {
+            const [r] = await conn.query('UPDATE op_items SET proveedor_id = ? WHERE op_id = ? AND proveedor_id IS NULL', [proveedorRespaldo, op.id]);
+            stats.proveedores_completados += r.affectedRows;
+          }
         } else if (datos.lineas.length > 0) {
           for (const linea of datos.lineas) {
             const codigo = codigoProducto(linea.lineaCatalogo, linea.codColor);
@@ -167,11 +184,12 @@ export async function sincronizarProductosDesdeCarpetas() {
             }
 
             await conn.query(
-              `INSERT INTO op_items (op_id, producto_id, acabado, formato, cajas, m2_x_caja, cantidad, notas, estado)
-               VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'pendiente')`,
+              `INSERT INTO op_items (op_id, producto_id, proveedor_id, acabado, formato, cajas, m2_x_caja, cantidad, notas, estado)
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'pendiente')`,
               [
                 op.id,
                 productoId,
+                proveedorRespaldo,
                 normTexto(linea.acabado) || null,
                 normTexto(linea.formato).slice(0, FORMATO_MAX) || null,
                 linea.cajas,
@@ -189,6 +207,7 @@ export async function sincronizarProductosDesdeCarpetas() {
         await conn.commit();
       } catch (err) {
         await conn.rollback().catch(() => {});
+        proveedores.reiniciar();
         stats.errores.push({ op: carpeta.numeroOp, carpeta: carpeta.name, mensaje: err.message });
       }
     }

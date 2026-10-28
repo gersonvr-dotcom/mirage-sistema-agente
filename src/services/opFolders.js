@@ -47,6 +47,26 @@ export async function listarCarpetasOP() {
   return carpetas;
 }
 
+/**
+ * Valor de un rótulo del encabezado ("Fábrica:", "Cotización") en las filas de la hoja: la primera celda con texto
+ * a la derecha del rótulo que no sea el propio rótulo repetido. Las celdas combinadas repiten el valor en varias columnas, por eso se toma solo la primera.
+ */
+export function valorDeRotulo(filas, esRotulo) {
+  for (const valores of filas) {
+    const idx = valores.findIndex((v) => typeof v === 'string' && esRotulo(v.trim().toUpperCase()));
+    if (idx === -1) continue;
+    for (let j = idx + 1; j < valores.length; j++) {
+      const v = celdaTexto(valores[j]);
+      // Un rótulo combinado ("Fábrica:" en dos columnas) se repite: no es el valor.
+      if (v && !(typeof v === 'string' && esRotulo(v.trim().toUpperCase()))) return v;
+    }
+    return null;
+  }
+  return null;
+}
+
+export const esRotuloFabrica = (t) => /^F[AÁ]BRICA\b/.test(t);
+
 /** Dentro de una carpeta de OP, busca el archivo "OP-XXXX.xlsx", extrae el número de
  * cotización y las líneas de producto (tabla que arranca en la fila "LINEA" y termina en
  * "TOTALES"). Devuelve null si la carpeta no tiene ese archivo. */
@@ -62,20 +82,10 @@ export async function obtenerCotizacionYLineas(carpeta) {
   const sheet = workbook.getWorksheet('OP') || workbook.worksheets[0];
   if (!sheet) return null;
 
-  let numeroCotizacion = null;
-  for (let i = 1; i <= Math.min(sheet.rowCount, 20); i++) {
-    const valores = sheet.getRow(i).values;
-    const idxLabel = valores.findIndex((v) => typeof v === 'string' && v.trim().toUpperCase().startsWith('COTIZACI'));
-    if (idxLabel === -1) continue;
-    for (let j = idxLabel + 1; j < valores.length; j++) {
-      const v = celdaTexto(valores[j]);
-      if (v) {
-        numeroCotizacion = v;
-        break;
-      }
-    }
-    break;
-  }
+  const encabezado = [];
+  for (let i = 1; i <= Math.min(sheet.rowCount, 20); i++) encabezado.push(sheet.getRow(i).values);
+  const numeroCotizacion = valorDeRotulo(encabezado, (t) => t.startsWith('COTIZACI'));
+  const fabrica = valorDeRotulo(encabezado, esRotuloFabrica);
 
   let filaHeader = null;
   for (let i = 1; i <= Math.min(sheet.rowCount, 40); i++) {
@@ -109,5 +119,5 @@ export async function obtenerCotizacionYLineas(carpeta) {
     }
   }
 
-  return { numeroCotizacion, lineas };
+  return { numeroCotizacion, fabrica, lineas };
 }

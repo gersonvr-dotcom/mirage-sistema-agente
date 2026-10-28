@@ -137,6 +137,7 @@ CREATE TABLE ops (
   cliente_id              INT UNSIGNED NOT NULL,
   tipo_pedido             ENUM('principal','adicional','perfiles','otro') NOT NULL DEFAULT 'principal',
   descripcion_pedido      VARCHAR(150) NULL,       -- texto original de PROYECTO en el Excel (ej. 'ALESTE 137 PERFIL')
+  fabrica                 VARCHAR(150) NULL,       -- 'Fábrica' del encabezado del OP-XXXX.xlsx; respaldo del proveedor por línea
   fecha_emision           DATE NOT NULL,
   fecha_pactada           DATE,
   oc_cliente              VARCHAR(60),
