@@ -56,6 +56,9 @@ si el estado no es "coincide". Presenta las diferencias en una tabla corta.
 Una cotización puede tener varias OPs (una por fábrica, o varias de la misma): cada OP se valida solo con las PIs de su
 carpeta y su fábrica; no sumes ni compares totales de la cotización con una sola PI. Las PIs complementarias
 (reposición, reserva, adicional o con sufijo -A/-E) no se suman a la OP: la herramienta las lista en las advertencias,
-menciónalas. Los duplicados ("(1)", "(2)") se cuentan una sola vez.`;
+menciónalas. Los duplicados ("(1)", "(2)") se cuentan una sola vez.
+Los rodapiés suelen pedirse a fábrica como pieza completa (p. ej. 60X120) y cortarse en el taller: la OP y la PI traen la
+pieza entera, y los metros lineales de la nota (p. ej. "RODAPIE 15X120 85 ML") son el resultado del corte, no la cantidad
+de la PI. No los compares con las cajas ni los cuentes como diferencia.`;
 
 export const MAX_TOOL_ROUNDS = 6;
