@@ -52,6 +52,10 @@ todo cuadra; "parcial" = lo que trae la PI cuadra pero faltan cajas por cubrir (
 y cada "revisar_acabado"; "no_concluyente" = no se pudo comparar, explica el motivo y qué PIs se excluyeron. Una
 "diferencia_menor" es de una caja o lo que fije la tolerancia: menciónala sin dramatizar y sin inventar su causa (no
 digas que es por empaque o pallets: no lo sabes). Nunca digas que todo coincide
-si el estado no es "coincide". Presenta las diferencias en una tabla corta.`;
+si el estado no es "coincide". Presenta las diferencias en una tabla corta.
+Una cotización puede tener varias OPs (una por fábrica, o varias de la misma): cada OP se valida solo con las PIs de su
+carpeta y su fábrica; no sumes ni compares totales de la cotización con una sola PI. Las PIs complementarias
+(reposición, reserva, adicional o con sufijo -A/-E) no se suman a la OP: la herramienta las lista en las advertencias,
+menciónalas. Los duplicados ("(1)", "(2)") se cuentan una sola vez.`;
 
 export const MAX_TOOL_ROUNDS = 6;

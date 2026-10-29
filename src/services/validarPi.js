@@ -2,7 +2,9 @@
 // reglas, no el modelo: el agente solo redacta el resultado. Las reglas salen de revisar PIs reales de MIRAGE:
 //  - la PI agrupa lo que la OP tiene en varias líneas (194 + 31 cajas en la OP = 225 en la PI), por eso se suma
 //    cada lado por clave (color + formato + acabado) antes de comparar;
-//  - una OP puede tener varias PIs parciales: se suman todas y, si falta material, es "parcial", no "diferencia";
+//  - una OP puede tener varias PIs parciales: se suman y, si falta material, es "parcial", no "diferencia". Pero las PIs
+//    complementarias (reposición, reserva, adicional, sufijo -A/-E…) son pedidos aparte que la OP no incluye: no se suman;
+//  - la misma PI aparece a veces dos veces en la carpeta ("PI 78493 OP 2026-107 (1).PDF"): se cuenta una sola vez;
 //  - la clave de color de la PI sale de la descripción ("EY 02 NAT SQ 60X120"), la de la OP del código ("ELYSIAN-EY 02");
 //  - el acabado se escribe distinto (PI "NAT SQ", OP "NAT R10") y una discrepancia solo se marca para revisar.
 
@@ -20,11 +22,12 @@ export function claveColor(texto) {
   return m ? `${m[1]}${m[2]}` : null;
 }
 
-/** Formato sin espesor ni unidades y sin orientación: "60X120X9", "120X60", "60X60X20MM" → "60X120", "60X120", "60X60". */
+/** Formato sin espesor ni unidades y sin orientación, con las medidas al entero (60X119.7 es el 60X120 real):
+ * "60X120X9", "120X60", "60X60X20MM" → "60X120", "60X120", "60X60". */
 export function claveFormato(texto) {
   const m = mayus(texto).match(/(\d+(?:[.,]\d+)?)\s*X\s*(\d+(?:[.,]\d+)?)/);
   if (!m) return null;
-  const dims = [m[1], m[2]].map((d) => Number(d.replace(',', '.'))).sort((a, b) => a - b);
+  const dims = [m[1], m[2]].map((d) => Math.round(Number(d.replace(',', '.')))).sort((a, b) => a - b);
   return `${dims[0]}X${dims[1]}`;
 }
 
@@ -103,6 +106,25 @@ function agruparOP(items) {
   return grupos;
 }
 
+const COMPLEMENTARIA_RE = /\b(REPO(?:SICI[OÓ]N)?|RESERVA|ADICIONAL)\b|\d{4}-\d{3}-[A-Z]{1,2}\b/i;
+
+/** ¿Es una PI de un pedido aparte (reposición, reserva, adicional, sufijo de letra) y no la del pedido de la OP? */
+export function esPiComplementaria(pi) {
+  return COMPLEMENTARIA_RE.test(`${pi.documento ?? ''} ${pi.extraccion?.referencia_pedido ?? ''}`);
+}
+
+const nombreBase = (documento) => String(documento ?? '').replace(/\.[A-Za-z0-9]+$/, '').replace(/\s*\(\d+\)/g, '').trim().toUpperCase();
+// Solo cantidades: una misma PI reemitida con otro precio (versiones del mismo pedido) sigue siendo la misma PI.
+const mismosTotales = (a, b) => ['cajas', 'm2'].every((k) => (a.totales[k] ?? null) === (b.totales[k] ?? null));
+
+/** ¿Es `pi` otra copia de `otra`? Mismo archivo sin el "(n)" de las copias, o mismo proveedor y número de documento. */
+function esCopiaDe(pi, otra) {
+  if (nombreBase(pi.documento) === nombreBase(otra.documento)) return true;
+  const a = pi.extraccion;
+  const b = otra.extraccion;
+  return !!a.numero_documento && a.numero_documento === b.numero_documento && (a.proveedor ?? '') === (b.proveedor ?? '');
+}
+
 /** ¿El proveedor de una línea de OP es el que emite la PI? "MIRAGE" cabe en "MIRAGE GRANITO CERAMICO S.p.A.". */
 export function mismoProveedor(nombreOP, nombrePI) {
   const compacto = (t) => mayus(t).replace(/[^A-Z0-9]/g, '');
@@ -165,9 +187,27 @@ export function compararPiConOp({ itemsOP, pis, toleranciaCajas = TOLERANCIA_CAJ
   const advertencias = [];
   const ignoradas = [];
 
+  // Copias: de las PIs con la misma identidad se queda una (las verificadas primero). Si la copia trae cantidades distintas
+  // no se puede saber cuál vale y queda excluida, lo que impide dar la OP por coincidente.
+  const orden = [...pis].sort((a, b) => (a.validacion.estado === 'requiere_revision') - (b.validacion.estado === 'requiere_revision'));
+  const unicas = [];
+  for (const pi of orden) {
+    const original = unicas.find((o) => esCopiaDe(pi, o));
+    if (!original) {
+      unicas.push(pi);
+    } else if (pi.validacion.estado === 'requiere_revision' || mismosTotales(pi.extraccion, original.extraccion)) {
+      advertencias.push(`"${pi.documento}" es una copia de "${original.documento}": se cuenta una sola vez.`);
+    } else {
+      ignoradas.push({ documento: pi.documento, motivo: `tiene el mismo número que "${original.documento}" pero cantidades distintas` });
+    }
+  }
+
   const utilizables = [];
-  for (const pi of pis) {
-    if (pi.extraccion.tipo_documento !== 'proforma_invoice') {
+  for (const pi of unicas) {
+    if (pi.extraccion.tipo_documento === 'recibo_o_pago') {
+      // Un recibo o anticipo emitido al cliente no es una PI: se ignora sin que impida la coincidencia de las demás.
+      advertencias.push(`"${pi.documento}" es un recibo o pago, no una proforma de proveedor: no se usó.`);
+    } else if (pi.extraccion.tipo_documento !== 'proforma_invoice') {
       ignoradas.push({ documento: pi.documento, motivo: 'no es una proforma de proveedor' });
     } else if (pi.validacion.estado === 'requiere_revision') {
       ignoradas.push({ documento: pi.documento, motivo: 'la lectura no cuadra con sus propios totales' });
@@ -182,6 +222,18 @@ export function compararPiConOp({ itemsOP, pis, toleranciaCajas = TOLERANCIA_CAJ
   const salidaVacia = (estado, motivo) => ({ estado, motivo, resumen: {}, grupos: [], sin_clave: [], advertencias, pis_excluidas: ignoradas });
   if (!itemsOP.length) return salidaVacia('no_concluyente', 'La OP no tiene líneas cargadas.');
   if (!utilizables.length) return salidaVacia('no_concluyente', 'No hay ninguna PI utilizable para comparar.');
+
+  // Las PIs de reposición/reserva/adicional son pedidos aparte: se informan pero no se suman a lo que la OP debería tener.
+  // Si todas lo parecen no hay referencia para distinguirlas y se comparan todas.
+  const complementarias = utilizables.filter(esPiComplementaria);
+  const principales = utilizables.filter((p) => !esPiComplementaria(p));
+  if (complementarias.length && principales.length) {
+    const lista = complementarias.map((p) => `"${p.documento}" (${p.extraccion.totales.cajas ?? '?'} cajas)`).join(', ');
+    advertencias.push(`PIs complementarias (reposición/reserva/adicional) no sumadas a la OP: ${lista}.`);
+  } else if (complementarias.length) {
+    advertencias.push('Todas las PIs parecen complementarias (reposición/reserva/adicional/sufijo): se compararon todas.');
+  }
+  utilizables.splice(0, utilizables.length, ...(principales.length ? principales : utilizables));
 
   // Solo las líneas de OP del proveedor que emite la PI (una OP puede mezclar fábricas).
   const proveedoresPI = [...new Set(utilizables.map((p) => p.extraccion.proveedor).filter(Boolean))];
@@ -248,5 +300,5 @@ export function compararPiConOp({ itemsOP, pis, toleranciaCajas = TOLERANCIA_CAJ
   if (resultados.some((r) => r.estado === 'sin_cantidad_comparable')) estado = 'con_diferencias';
   if (ignoradas.length && estado === 'coincide') estado = 'no_concluyente';
 
-  return { estado, resumen, grupos: resultados, sin_clave: sinClave, advertencias, pis_excluidas: ignoradas };
+  return { estado, resumen, grupos: resultados, sin_clave: sinClave, advertencias, pis_excluidas: ignoradas, ...(complementarias.length && principales.length ? { pis_complementarias: complementarias.map((p) => p.documento) } : {}) };
 }

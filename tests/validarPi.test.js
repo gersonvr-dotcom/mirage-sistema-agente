@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { compararPiConOp, claveColor, claveFormato, claveAcabado, mismoProveedor } from '../src/services/validarPi.js';
+import { compararPiConOp, esPiComplementaria, claveColor, claveFormato, claveAcabado, mismoProveedor } from '../src/services/validarPi.js';
 
 const op = (codigo, acabado, formato, cajas, m2, proveedor = 'MIRAGE', unidad = 'M2') => ({ codigo, acabado, formato, cajas, cantidad: m2, unidad, proveedor });
 const lPI = (descripcion, formato, cajas, m2, extra = {}) => ({ codigo: 'X', descripcion, acabado: null, formato, unidad: 'M2', cantidad: m2, cajas, m2, precio_unitario: 10, importe: 10, es_cargo: false, ...extra });
@@ -44,6 +44,7 @@ test('claves: color, formato y acabado se normalizan', () => {
   assert.equal(claveFormato('60X60X20MM'), '60X60');
   assert.equal(claveFormato('60X60 (ESPESOR QUE INDIQUE FABRICA)'), '60X60');
   assert.equal(claveFormato('MALLA 36T 30X30'), '30X30');
+  assert.equal(claveFormato('60X119.7'), '60X120');
   assert.equal(claveAcabado('NAT SQ'), 'NAT');
   assert.equal(claveAcabado('NAT (R10)'), 'NAT');
   assert.equal(claveAcabado('GP'), 'GRIP');
@@ -62,11 +63,66 @@ test('OP 2026-006: la PI principal suma las líneas de la OP y coincide', () => 
   assert.deepEqual([g.op.cajas, g.pi.cajas, g.op.lineas], [225, 225, 2]);
 });
 
-test('OP 2026-006 con la PI -A: su línea no está en la OP y se reporta', () => {
+test('OP 2026-006 con la PI -A: es complementaria, no se suma y se avisa', () => {
   const r = compararPiConOp({ itemsOP: OP_006, pis: [PI_PRINCIPAL(), PI_A()] });
-  assert.equal(r.estado, 'con_diferencias');
-  assert.equal(r.resumen.solo_en_pi, 1);
-  assert.equal(grupo(r, 'EY02', '120X120').estado, 'solo_en_pi');
+  assert.equal(r.estado, 'coincide');
+  assert.equal(r.resumen.pis_utilizadas, 1);
+  assert.deepEqual(r.pis_complementarias, ['PI 72018 OP 2026-006-A.PDF']);
+  assert.ok(r.advertencias.some((a) => a.includes('complementarias')));
+  // si el material de la PI principal no alcanza, la complementaria no lo tapa
+  const corta = compararPiConOp({ itemsOP: OP_006.map((i, k) => (k === 6 ? { ...i, cajas: 60 } : i)), pis: [PI_PRINCIPAL(), PI_A()] });
+  assert.notEqual(corta.estado, 'coincide');
+});
+
+test('PIs complementarias: reposición, reserva, adicional y sufijo de letra', () => {
+  for (const nombre of ['PI 76413 REPOSICION OP 2026-048.PDF', 'PI 56577 RESERVA FEDE.PDF', 'PI 60257 OP 2026-065-E.PDF', 'PI 86648 OP 2026-065-A.PDF', 'PI 53870 2026-065 REPO ANDRE.PDF']) {
+    assert.ok(esPiComplementaria({ documento: nombre, extraccion: {} }), nombre);
+  }
+  for (const nombre of ['PI 34577 OP 2026-006.PDF', 'PI 15458 OP 2026-187 (2).PDF', 'PI 71563 2026-106-V2 (1).PDF']) {
+    assert.ok(!esPiComplementaria({ documento: nombre, extraccion: {} }), nombre);
+  }
+  // si todas lo parecen se comparan todas, con aviso
+  const r = compararPiConOp({ itemsOP: OP_006, pis: [pi('PI 1 OP 2026-006-A.PDF', PI_PRINCIPAL().extraccion.lineas)] });
+  assert.equal(r.estado, 'coincide');
+  assert.ok(r.advertencias.some((a) => a.includes('Todas las PIs parecen complementarias')));
+});
+
+test('la misma PI dos veces en la carpeta se cuenta una vez; si difieren no hay coincidencia', () => {
+  const base = PI_PRINCIPAL();
+  const conNumero = (doc, lineas, num = '34577') => ({ ...pi(doc, lineas), extraccion: { ...pi(doc, lineas).extraccion, numero_documento: num } });
+  const copia = compararPiConOp({ itemsOP: OP_006, pis: [base, { ...PI_PRINCIPAL(), documento: 'PI 34577 OP 2026-006 (1).PDF' }] });
+  assert.equal(copia.estado, 'coincide');
+  assert.equal(copia.resumen.pis_utilizadas, 1);
+  assert.ok(copia.advertencias.some((a) => a.includes('copia')));
+  // una copia mal leída (no cuadra con sus totales) no impide la coincidencia: es el mismo documento
+  const mala = { ...PI_PRINCIPAL(), documento: 'PI 34577 OP 2026-006 (3).PDF', validacion: { estado: 'requiere_revision', avisos: [] } };
+  assert.equal(compararPiConOp({ itemsOP: OP_006, pis: [base, mala] }).estado, 'coincide');
+  // mismo número de documento y cantidades distintas: se excluye la segunda
+  const a = conNumero('PI 78493 OP 2026-107.PDF', PI_PRINCIPAL().extraccion.lineas);
+  const b = conNumero('PI 78493 otra.PDF', PI_PRINCIPAL().extraccion.lineas.map((l, i) => (i === 0 ? { ...l, cajas: 200 } : l)), '34577');
+  a.extraccion.numero_documento = '34577';
+  a.extraccion.totales = { cajas: 947 };
+  b.extraccion.totales = { cajas: 922 };
+  const r = compararPiConOp({ itemsOP: OP_006, pis: [a, b] });
+  assert.notEqual(r.estado, 'coincide');
+  assert.equal(r.pis_excluidas.length, 1);
+});
+
+test('un recibo o anticipo en la carpeta no es una PI y no impide la coincidencia; otro tipo de documento sí', () => {
+  const recibo = pi('PROFORMA 2607_ADELANTO.pdf', [], { extraccion: { tipo_documento: 'recibo_o_pago', proveedor: 'KALA', lineas: [], totales: {} } });
+  const r = compararPiConOp({ itemsOP: OP_006, pis: [PI_PRINCIPAL(), recibo] });
+  assert.equal(r.estado, 'coincide');
+  assert.ok(r.advertencias.some((a) => a.includes('recibo')));
+  const otro = pi('algo.pdf', [], { extraccion: { tipo_documento: 'otro', proveedor: 'X', lineas: [], totales: {} } });
+  assert.notEqual(compararPiConOp({ itemsOP: OP_006, pis: [PI_PRINCIPAL(), otro] }).estado, 'coincide');
+});
+
+test('formato 60X119.7 de la PI se empareja con 60X120 de la OP', () => {
+  const r = compararPiConOp({
+    itemsOP: [op('RO 03', 'SP', '60X120', 8, 11.52)],
+    pis: [pi('PI 29982 OP 2026-020.PDF', [lPI('RO 03 SP SQ 60X119.7', '60X119.7', 8, 11.491)])],
+  });
+  assert.equal(r.estado, 'coincide');
 });
 
 test('cantidad alterada en la OP: nunca sale "coincide"', () => {
@@ -155,7 +211,6 @@ test('PI que no es proforma, con lectura dudosa o de otro formato: se excluye y 
   recibo.extraccion.tipo_documento = 'recibo_o_pago';
   const r1 = compararPiConOp({ itemsOP: OP_006, pis: [recibo] });
   assert.equal(r1.estado, 'no_concluyente');
-  assert.equal(r1.pis_excluidas.length, 1);
 
   const dudosa = { ...PI_PRINCIPAL(), validacion: { estado: 'requiere_revision', avisos: ['x'] } };
   assert.equal(compararPiConOp({ itemsOP: OP_006, pis: [dudosa] }).estado, 'no_concluyente');
@@ -163,8 +218,8 @@ test('PI que no es proforma, con lectura dudosa o de otro formato: se excluye y 
   const otroFormato = pi('PERONDA.pdf', [lPI('GLINT WHITE/5X15', '5X15', 65, 27.3)]);
   assert.equal(compararPiConOp({ itemsOP: OP_006, pis: [otroFormato] }).estado, 'no_concluyente');
 
-  // Si además hay una PI válida con diferencias, el resultado las sigue mostrando
-  const mezcla = compararPiConOp({ itemsOP: OP_006, pis: [PI_PRINCIPAL(), recibo] });
+  // Una PI dudosa o de otro formato junto a una válida impide declarar "coincide"
+  const mezcla = compararPiConOp({ itemsOP: OP_006, pis: [PI_PRINCIPAL(), otroFormato] });
   assert.equal(mezcla.estado, 'no_concluyente', 'una PI excluida impide declarar "coincide"');
 });
 
