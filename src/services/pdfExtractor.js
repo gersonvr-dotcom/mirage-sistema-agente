@@ -2,6 +2,7 @@ import { GoogleGenAI } from '@google/genai';
 import Anthropic from '@anthropic-ai/sdk';
 import { pool } from '../db/pool.js';
 import { obtenerAccessToken, graphDescargarContenido } from './sharepoint.js';
+import { obtenerArchivoManual } from './documentosManuales.js';
 import {
   ESQUEMA_PI,
   PROMPT_EXTRACCION_PI,
@@ -104,7 +105,7 @@ const enCurso = new Map(); // documentoId -> Promise: evita leer dos veces el mi
 /**
  * Datos leídos de un documento de OP (PI). Usa la caché de documentos_op.extraccion_json; esa columna se vacía sola
  * cuando la sincronización detecta otro etag, así que lo cacheado siempre corresponde a la versión actual del archivo.
- * Si no hay caché descarga el PDF de SharePoint (solo en memoria, no se escribe a disco), lo lee y guarda el resultado.
+ * Si no hay caché descarga el PDF de SharePoint (solo en memoria, no se escribe a disco) o, si se subió a mano, lo lee de la BD, lo lee y guarda el resultado.
  * Un fallo del modelo no se cachea. Devuelve { ...registro, desde_cache }.
  */
 export function obtenerExtraccionDocumento(documentoId, { forzar = false } = {}) {
@@ -118,7 +119,7 @@ export function obtenerExtraccionDocumento(documentoId, { forzar = false } = {})
 
 async function leerYGuardar(id, forzar) {
   const [[doc]] = await pool.query(
-    `SELECT id, op_id, tipo, extension, nombre_archivo, drive_id, item_id, tamano, etag, extraccion_json
+    `SELECT id, op_id, tipo, origen, extension, nombre_archivo, drive_id, item_id, tamano, etag, extraccion_json
        FROM documentos_op WHERE id = ?`,
     [id]
   );
@@ -134,8 +135,13 @@ async function leerYGuardar(id, forzar) {
     return { error: 'archivo_muy_grande', mensaje: `El PDF pesa más de ${TAMANO_MAX / 1024 / 1024} MB` };
   }
 
-  const token = await obtenerAccessToken();
-  const pdf = await graphDescargarContenido(doc.drive_id, doc.item_id, token);
+  let pdf;
+  if (doc.origen === 'manual') {
+    pdf = (await obtenerArchivoManual(doc.id))?.contenido;
+    if (!pdf) return { error: 'documento_no_encontrado', mensaje: `No se encontró el contenido del documento ${id}` };
+  } else {
+    pdf = await graphDescargarContenido(doc.drive_id, doc.item_id, await obtenerAccessToken());
+  }
   const leido = await extraerPiDePdf(pdf);
   const registro = {
     version: VERSION_EXTRACCION,

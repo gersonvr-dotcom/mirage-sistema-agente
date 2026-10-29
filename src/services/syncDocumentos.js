@@ -47,7 +47,7 @@ async function archivosDeCarpeta(carpeta, token, stats) {
 /**
  * Recorre las carpetas de OP en SharePoint SIN descargar nada y registra cada archivo en documentos_op con su tipo
  * (por nombre), enlace y etag. Idempotente: la clave es (drive_id, item_id); si un archivo cambia de etag se borra su
- * caché de extracción; los archivos que ya no están en SharePoint se quitan del índice.
+ * caché de extracción; los archivos que ya no están en SharePoint se quitan del índice (los subidos a mano no se tocan).
  */
 export async function sincronizarDocumentosDesdeCarpetas() {
   const carpetas = await listarCarpetasOP();
@@ -81,7 +81,7 @@ export async function sincronizarDocumentosDesdeCarpetas() {
       await conn.beginTransaction();
       // Lo que ya está indexado de esta carpeta, para contar nuevos/cambiados/sin cambios y no reescribir lo que no cambió.
       const [existentes] = await conn.query(
-        'SELECT item_id, etag, tipo, nombre_archivo, subcarpeta FROM documentos_op WHERE op_id = ? AND carpeta = ?',
+        "SELECT item_id, etag, tipo, nombre_archivo, subcarpeta FROM documentos_op WHERE op_id = ? AND carpeta = ? AND origen = 'sharepoint'",
         [opId, carpeta.name]
       );
       const previo = new Map(existentes.map((e) => [e.item_id, e]));
@@ -125,8 +125,8 @@ export async function sincronizarDocumentosDesdeCarpetas() {
       // Lo que ya no está en la carpeta (borrado o movido en SharePoint) sale del índice.
       const vigentes = archivos.map((a) => a.id);
       const [borrados] = vigentes.length
-        ? await conn.query('DELETE FROM documentos_op WHERE op_id = ? AND carpeta = ? AND item_id NOT IN (?)', [opId, carpeta.name, vigentes])
-        : await conn.query('DELETE FROM documentos_op WHERE op_id = ? AND carpeta = ?', [opId, carpeta.name]);
+        ? await conn.query("DELETE FROM documentos_op WHERE op_id = ? AND carpeta = ? AND origen = 'sharepoint' AND item_id NOT IN (?)", [opId, carpeta.name, vigentes])
+        : await conn.query("DELETE FROM documentos_op WHERE op_id = ? AND carpeta = ? AND origen = 'sharepoint'", [opId, carpeta.name]);
       stats.documentos_eliminados_del_indice += borrados.affectedRows;
 
       await conn.commit();

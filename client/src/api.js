@@ -93,6 +93,13 @@ export const api = {
   sincronizarProductosOps: () => request('/config/sincronizar-productos', { method: 'POST' }),
   estadoSincronizacionProductos: () => request('/config/sincronizar-productos/estado'),
   documentosOP: (id) => request(`/ops/${id}/documentos`),
+  subirPiOP: (id, archivo) =>
+    request(`/ops/${id}/documentos?nombre=${encodeURIComponent(archivo.name)}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/pdf' },
+      body: archivo,
+    }),
+  eliminarDocumentoOP: (docId) => request(`/ops/documentos/${docId}`, { method: 'DELETE' }),
   sincronizarDocumentos: () => request('/config/sincronizar-documentos', { method: 'POST' }),
   estadoSincronizacionDocumentos: () => request('/config/sincronizar-documentos/estado'),
   sincronizarCotizaciones: () => request('/config/sincronizar-cotizaciones', { method: 'POST' }),

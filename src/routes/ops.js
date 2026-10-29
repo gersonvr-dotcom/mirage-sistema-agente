@@ -1,4 +1,4 @@
-import { Router } from 'express';
+import express, { Router } from 'express';
 import {
   listarOPs,
   obtenerOP,
@@ -16,6 +16,13 @@ import { opSegunRol } from '../services/permisosPrecios.js';
 import { TIPOS_PEDIDO } from '../db/pedidoTipos.js';
 import { puedeVerPrecios } from '../services/permisosPrecios.js';
 import { TIPOS_DOCUMENTO_VISIBLES_OPERADOR } from '../services/clasificadorDocumentos.js';
+import {
+  ErrorSubida,
+  TAMANO_MAX_SUBIDA,
+  eliminarDocumentoManual,
+  guardarPiManual,
+  obtenerArchivoManual,
+} from '../services/documentosManuales.js';
 
 export const opsRouter = Router();
 
@@ -38,6 +45,57 @@ opsRouter.get('/:id/documentos', async (req, res) => {
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'No se pudieron listar los documentos de la OP.', detail: err.message });
+  }
+});
+
+// Carga manual de una PI (R2-05): el PDF viaja como cuerpo crudo (Content-Type application/pdf) y el nombre en ?nombre=.
+// Solo administradores: las PIs traen costos de fábrica. Lo cargado se guarda en la BD, no en SharePoint.
+opsRouter.post(
+  '/:id/documentos',
+  requireRole('administrador'),
+  express.raw({ type: ['application/pdf', 'application/octet-stream'], limit: TAMANO_MAX_SUBIDA }),
+  async (req, res) => {
+    try {
+      const documento = await guardarPiManual({
+        opId: req.params.id,
+        nombre: req.query.nombre,
+        buffer: req.body,
+        usuarioId: req.user.sub,
+      });
+      res.status(201).json({ documento });
+    } catch (err) {
+      if (err instanceof ErrorSubida) return res.status(err.status).json({ error: err.message });
+      if (err.type === 'entity.too.large') return res.status(413).json({ error: 'El PDF pesa más de 10 MB.' });
+      console.error(err);
+      res.status(500).json({ error: 'No se pudo guardar el documento.', detail: err.message });
+    }
+  }
+);
+
+opsRouter.get('/documentos/:docId/archivo', requireRole('administrador'), async (req, res) => {
+  try {
+    const archivo = await obtenerArchivoManual(req.params.docId);
+    if (!archivo) return res.status(404).json({ error: 'Documento no encontrado.' });
+    res.set({
+      'Content-Type': 'application/pdf',
+      'Content-Disposition': `inline; filename*=UTF-8''${encodeURIComponent(archivo.nombre_archivo)}`,
+      'X-Content-Type-Options': 'nosniff',
+    });
+    res.send(archivo.contenido);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'No se pudo leer el documento.', detail: err.message });
+  }
+});
+
+opsRouter.delete('/documentos/:docId', requireRole('administrador'), async (req, res) => {
+  try {
+    const eliminado = await eliminarDocumentoManual(req.params.docId);
+    if (!eliminado) return res.status(404).json({ error: 'Documento no encontrado o no es una carga manual.' });
+    res.status(204).end();
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'No se pudo eliminar el documento.', detail: err.message });
   }
 });
 

@@ -744,7 +744,7 @@ export async function documentosDeOPPorNumero(candidatos, { tipos } = {}) {
 export async function listarDocumentosOP(opId, { tipos } = {}) {
   const filtro = tipos?.length ? ' AND tipo IN (?)' : '';
   const [rows] = await pool.query(
-    `SELECT id, tipo, extension, nombre_archivo, carpeta, subcarpeta, web_url, tamano,
+    `SELECT id, tipo, origen, extension, nombre_archivo, carpeta, subcarpeta, web_url, tamano,
             DATE_FORMAT(modificado_en, '%Y-%m-%d') AS modificado, (extraido_en IS NOT NULL) AS extraido
        FROM documentos_op
       WHERE op_id = ?${filtro}

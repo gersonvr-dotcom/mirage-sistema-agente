@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { api } from '../api';
 import { useAuth } from '../AuthContext';
@@ -71,6 +71,9 @@ export function OPDetail() {
 
   const [confirmandoBorrarOP, setConfirmandoBorrarOP] = useState(false);
   const [documentos, setDocumentos] = useState([]);
+  const [subiendoPI, setSubiendoPI] = useState(false);
+  const [errorDocumento, setErrorDocumento] = useState(null);
+  const inputPIRef = useRef(null);
 
   async function cargar() {
     setLoading(true);
@@ -91,6 +94,34 @@ export function OPDetail() {
     api.productos().then(({ productos }) => setProductos(productos)).catch(() => {});
     api.proveedores().then(({ proveedores }) => setProveedores(proveedores)).catch(() => {});
   }, [id]);
+
+  async function subirPI(e) {
+    const archivo = e.target.files?.[0];
+    e.target.value = '';
+    if (!archivo) return;
+    setErrorDocumento(null);
+    setSubiendoPI(true);
+    try {
+      await api.subirPiOP(id, archivo);
+      const { documentos } = await api.documentosOP(id);
+      setDocumentos(documentos);
+    } catch (err) {
+      setErrorDocumento(err.message);
+    } finally {
+      setSubiendoPI(false);
+    }
+  }
+
+  async function eliminarDocumento(d) {
+    if (!window.confirm(`¿Quitar "${d.nombre_archivo}" de la OP? Solo se borra la carga manual.`)) return;
+    setErrorDocumento(null);
+    try {
+      await api.eliminarDocumentoOP(d.id);
+      setDocumentos((docs) => docs.filter((x) => x.id !== d.id));
+    } catch (err) {
+      setErrorDocumento(err.message);
+    }
+  }
 
   function abrirEditarHeader() {
     setHeaderForm({
@@ -539,7 +570,17 @@ export function OPDetail() {
         </form>
       )}
 
-      <h2 style={{ marginTop: 32 }}>Documentos en SharePoint</h2>
+      <h2 style={{ marginTop: 32 }}>Documentos</h2>
+      {esAdmin && (
+        <p>
+          <input ref={inputPIRef} type="file" accept="application/pdf,.pdf" onChange={subirPI} style={{ display: 'none' }} />
+          <button type="button" onClick={() => inputPIRef.current?.click()} disabled={subiendoPI}>
+            {subiendoPI ? 'Subiendo…' : 'Subir PI (PDF)'}
+          </button>{' '}
+          <span className="chat-empty">Queda guardada en el sistema (no en SharePoint) y el agente puede validarla contra la OP.</span>
+          {errorDocumento && <span className="error"> {errorDocumento}</span>}
+        </p>
+      )}
       {documentos.length === 0 ? (
         <p className="chat-empty">
           No hay documentos indexados para esta OP{esAdmin ? ' (se cargan desde Configuración → Documentos de las OPs).' : '.'}
@@ -556,7 +597,11 @@ export function OPDetail() {
               <ul>
                 {lista.map((d) => (
                   <li key={d.id}>
-                    {d.web_url ? (
+                    {d.origen === 'manual' ? (
+                      <a href={`/api/ops/documentos/${d.id}/archivo`} target="_blank" rel="noopener noreferrer">
+                        {d.nombre_archivo}
+                      </a>
+                    ) : d.web_url ? (
                       <a href={d.web_url} target="_blank" rel="noopener noreferrer">
                         {d.nombre_archivo}
                       </a>
@@ -565,8 +610,16 @@ export function OPDetail() {
                     )}{' '}
                     <span className="chat-empty">
                       {d.modificado ?? ''}
-                      {d.subcarpeta ? ` · ${d.subcarpeta}` : ''}
+                      {d.origen === 'manual' ? ' · carga manual' : d.subcarpeta ? ` · ${d.subcarpeta}` : ''}
                     </span>
+                    {esAdmin && d.origen === 'manual' && (
+                      <>
+                        {' '}
+                        <button type="button" onClick={() => eliminarDocumento(d)}>
+                          Quitar
+                        </button>
+                      </>
+                    )}
                   </li>
                 ))}
               </ul>
