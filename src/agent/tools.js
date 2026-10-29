@@ -18,7 +18,7 @@ import { rankingClientesPorM2, volumenTotalVendido, AGRUPACIONES_VALIDAS, METRIC
 import { TIPOS_CLIENTE } from '../db/clienteTipos.js';
 import { buscarProyectosSimilares } from '../services/proyectosSimilares.js';
 import { puedeVerPrecios, sinCamposDePrecio } from '../services/permisosPrecios.js';
-import { listarDocumentosOP, leerDocumentoOP } from './toolsDocumentos.js';
+import { listarDocumentosOP, leerDocumentoOP, validarPiVsOp } from './toolsDocumentos.js';
 
 export { puedeVerPrecios, sinCamposDePrecio };
 
@@ -230,6 +230,18 @@ export const TOOL_DEFINITIONS = [
     },
   },
   {
+    name: 'validar_pi_vs_op',
+    description: 'SOLO ADMINISTRADORES. Valida las proformas (PI) de una OP contra las líneas de esa OP, con reglas de código (no a ojo): suma las líneas de cada lado por color + formato + acabado, suma todas las PIs de la OP (pueden ser parciales) y devuelve estado global (coincide | parcial | con_diferencias | no_concluyente), un resumen y la lista de grupos con su estado (ok, diferencia_menor, parcial = la PI cubre solo parte de lo pedido, diferencia, solo_en_pi, solo_en_op, revisar_acabado). Úsala para "¿la PI de la OP X coincide con la OP?" o para validar un embarque. Puede tardar si hay que leer las PDFs; si responde "procesando", pide repetir en un minuto.',
+    parametersJsonSchema: {
+      type: 'object',
+      properties: {
+        numero_op: { type: 'string', description: 'Número de OP, por ejemplo "2026-006".' },
+        tolerancia_cajas: { type: 'number', description: 'Opcional: diferencia máxima en cajas que se considera "diferencia menor" (por defecto 1).' },
+      },
+      required: ['numero_op'],
+    },
+  },
+  {
     name: 'crear_proyecto',
     description:
       'Crea un nuevo proyecto (una OBRA) para un cliente. Los pedidos adicionales, de perfiles o de enchape de una obra ' +
@@ -325,6 +337,8 @@ export async function ejecutarTool(name, input, ctx = {}) {
       return listarDocumentosOP(input, ctx);
     case 'leer_documento_op':
       return leerDocumentoOP(input, ctx);
+    case 'validar_pi_vs_op':
+      return validarPiVsOp(input, ctx);
     case 'consultar_cliente':
       return buscarPorCliente(input.nombre_cliente);
     case 'consultar_producto':

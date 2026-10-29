@@ -1,4 +1,5 @@
-import { documentosDeOPPorNumero } from '../db/queries.js';
+import { documentosDeOPPorNumero, lineasOPParaValidacion } from '../db/queries.js';
+import { compararPiConOp, TOLERANCIA_CAJAS_DEFECTO } from '../services/validarPi.js';
 import { TIPOS_DOCUMENTO, TIPOS_DOCUMENTO_VISIBLES_OPERADOR } from '../services/clasificadorDocumentos.js';
 import { TIPOS_EXTRAIBLES, obtenerExtraccionDocumento } from '../services/pdfExtractor.js';
 import { puedeVerPrecios } from '../services/permisosPrecios.js';
@@ -18,6 +19,27 @@ const SIN_PERMISO_DOCUMENTO = {
   error: 'sin_permiso',
   mensaje: 'Las proformas (PI) traen costos y solo las puede leer el rol administrador. Díselo con claridad al usuario y no inventes su contenido.',
 };
+
+
+/**
+ * Lee (o toma de la caché) varios PDFs a la vez. Espera hasta EXTRACCION_ESPERA_MS; los que no terminen a tiempo
+ * quedan con hecho=false y siguen leyéndose en segundo plano (la próxima llamada los encuentra en caché).
+ */
+async function leerEnParalelo(docs) {
+  const estados = docs.map((doc) => ({ doc, hecho: false }));
+  const todas = Promise.all(
+    estados.map((e) =>
+      obtenerExtraccionDocumento(e.doc.id).then(
+        (res) => { e.res = res; },
+        (err) => { e.err = err; }
+      ).finally(() => { e.hecho = true; })
+    )
+  );
+  let timer;
+  await Promise.race([todas, new Promise((resolve) => { timer = setTimeout(resolve, esperaMs()); })]);
+  clearTimeout(timer);
+  return { estados };
+}
 
 const noEncontrada = (numero) => ({ error: `No se encontró la OP "${numero}".` });
 
@@ -62,18 +84,7 @@ export async function leerDocumentoOP({ numero_op, tipo = 'pi', nombre }, ctx) {
   }
   const elegidos = candidatos.slice(0, MAX_DOCUMENTOS_LEIDOS);
 
-  const estados = elegidos.map((doc) => ({ doc, hecho: false }));
-  const todas = Promise.all(
-    estados.map((e) =>
-      obtenerExtraccionDocumento(e.doc.id).then(
-        (res) => { e.res = res; },
-        (err) => { e.err = err; }
-      ).finally(() => { e.hecho = true; })
-    )
-  );
-  let timer;
-  await Promise.race([todas, new Promise((resolve) => { timer = setTimeout(resolve, esperaMs()); })]);
-  clearTimeout(timer);
+  const { estados } = await leerEnParalelo(elegidos);
 
   const documentos = [];
   const errores = [];
@@ -93,4 +104,38 @@ export async function leerDocumentoOP({ numero_op, tipo = 'pi', nombre }, ctx) {
   }
   if (errores.length) salida.errores = errores;
   return salida;
+}
+
+export async function validarPiVsOp({ numero_op, tolerancia_cajas }, ctx) {
+  if (!puedeVerPrecios(ctx)) return SIN_PERMISO_DOCUMENTO;
+  const r = await documentosDeOPPorNumero(candidatosNumeroOP(numero_op), { tipos: ['pi'] });
+  if (!r) return noEncontrada(numero_op);
+  const pdfs = r.documentos.filter((d) => d.extension === 'pdf');
+  if (!pdfs.length) return { numero_op: r.numero_op, estado: 'no_concluyente', motivo: 'La OP no tiene PIs (PDF) indexadas.' };
+  if (pdfs.length > MAX_DOCUMENTOS_LEIDOS) {
+    return { numero_op: r.numero_op, error: `La OP tiene ${pdfs.length} PIs y se pueden validar como máximo ${MAX_DOCUMENTOS_LEIDOS} a la vez.` };
+  }
+
+  const { estados } = await leerEnParalelo(pdfs);
+  const pendientes = estados.filter((e) => !e.hecho).map((e) => e.doc.nombre_archivo);
+  if (pendientes.length) {
+    // Con PIs sin leer la comparación quedaría incompleta y podría dar un resultado engañoso: se espera a tenerlas todas.
+    return {
+      numero_op: r.numero_op,
+      procesando: pendientes,
+      mensaje_procesando: 'Algunas PIs siguen leyéndose; la validación se hará cuando estén todas. Dile al usuario que repita la pregunta en un minuto.',
+    };
+  }
+  const errores = [];
+  const pis = [];
+  for (const e of estados) {
+    if (e.err) errores.push({ documento: e.doc.nombre_archivo, error: 'No se pudo leer el PDF en este momento.' });
+    else if (e.res.error) errores.push({ documento: e.doc.nombre_archivo, error: e.res.mensaje ?? e.res.error });
+    else pis.push({ documento: e.doc.nombre_archivo, extraccion: e.res.extraccion, validacion: e.res.validacion });
+  }
+  if (errores.length) return { numero_op: r.numero_op, estado: 'no_concluyente', motivo: 'No se pudieron leer todas las PIs; la comparación sería incompleta.', errores };
+
+  const tolerancia = Number.isFinite(Number(tolerancia_cajas)) && Number(tolerancia_cajas) >= 0 ? Number(tolerancia_cajas) : TOLERANCIA_CAJAS_DEFECTO;
+  const resultado = compararPiConOp({ itemsOP: await lineasOPParaValidacion(r.id), pis, toleranciaCajas: tolerancia });
+  return { numero_op: r.numero_op, tolerancia_cajas: tolerancia, ...resultado };
 }

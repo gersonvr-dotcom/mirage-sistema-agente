@@ -717,13 +717,28 @@ export async function historialPreciosProducto({ producto, cliente, limite = 40 
 
 
 /** Documentos indexados de una OP (SharePoint). `tipos` limita los tipos devueltos (ver clasificadorDocumentos.js). */
+/** Líneas de una OP en el formato que usa la validación de PIs (sin precios). */
+export async function lineasOPParaValidacion(opId) {
+  const [rows] = await pool.query(
+    `SELECT pr.codigo, oi.acabado, COALESCE(oi.formato, pr.formato) AS formato, oi.cajas, oi.cantidad,
+            pr.unidad_medida AS unidad, prov.nombre AS proveedor
+       FROM op_items oi
+       JOIN productos pr ON pr.id = oi.producto_id
+       LEFT JOIN proveedores prov ON prov.id = oi.proveedor_id
+      WHERE oi.op_id = ?
+      ORDER BY oi.id`,
+    [opId]
+  );
+  return rows;
+}
+
 /** OP por cualquiera de los números candidatos (el primero que exista) con sus documentos, o null si no existe. */
 export async function documentosDeOPPorNumero(candidatos, { tipos } = {}) {
   if (!candidatos.length) return null;
   const [filas] = await pool.query('SELECT id, numero_op FROM ops WHERE numero_op IN (?)', [candidatos]);
   const op = candidatos.map((c) => filas.find((f) => f.numero_op.toUpperCase() === c)).find(Boolean);
   if (!op) return null;
-  return { numero_op: op.numero_op, documentos: await listarDocumentosOP(op.id, { tipos }) };
+  return { id: op.id, numero_op: op.numero_op, documentos: await listarDocumentosOP(op.id, { tipos }) };
 }
 
 export async function listarDocumentosOP(opId, { tipos } = {}) {

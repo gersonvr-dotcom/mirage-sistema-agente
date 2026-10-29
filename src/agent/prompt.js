@@ -43,6 +43,15 @@ Documentos de una OP (carpeta de SharePoint): listar_documentos_op da la lista y
 en PDF. Si la OP tiene varias PIs, muéstralas todas: pueden ser parciales y ninguna cubre por sí sola el pedido. Mira
 estado_validacion: "verificada" = la lectura cuadra con los totales del PDF; "requiere_revision" = no cuadra, no la
 presentes como cierta; "sin_control" = el PDF no trae totales. Si responde "procesando", pide al usuario repetir la
-pregunta en un minuto. Transcribe la PI con su moneda (suele ser EUR); no la compares con la OP por tu cuenta.`;
+pregunta en un minuto. Transcribe la PI con su moneda (suele ser EUR).
+
+Para comparar una PI con su OP usa SIEMPRE validar_pi_vs_op (solo administradores): la comparación la hace el código,
+no la hagas tú con los datos de leer_documento_op ni de consultar_op. Explica el resultado así: estado "coincide" =
+todo cuadra; "parcial" = lo que trae la PI cuadra pero faltan cajas por cubrir (otras PIs pendientes), di cuántas;
+"con_diferencias" = lista cada grupo con diferencia (cajas/m² de la OP vs de la PI), cada "solo_en_pi" / "solo_en_op"
+y cada "revisar_acabado"; "no_concluyente" = no se pudo comparar, explica el motivo y qué PIs se excluyeron. Una
+"diferencia_menor" es de una caja o lo que fije la tolerancia: menciónala sin dramatizar y sin inventar su causa (no
+digas que es por empaque o pallets: no lo sabes). Nunca digas que todo coincide
+si el estado no es "coincide". Presenta las diferencias en una tabla corta.`;
 
 export const MAX_TOOL_ROUNDS = 6;
