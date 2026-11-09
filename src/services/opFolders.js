@@ -82,6 +82,11 @@ export async function obtenerCotizacionYLineas(carpeta) {
   const sheet = workbook.getWorksheet('OP') || workbook.worksheets[0];
   if (!sheet) return null;
 
+  return extraerOP(sheet);
+}
+
+/** Parte pura de la lectura del OP-XXXX.xlsx (hoja ya cargada): encabezado (cotización, fábrica) y líneas de producto. */
+export function extraerOP(sheet) {
   const encabezado = [];
   for (let i = 1; i <= Math.min(sheet.rowCount, 20); i++) encabezado.push(sheet.getRow(i).values);
   const numeroCotizacion = valorDeRotulo(encabezado, (t) => t.startsWith('COTIZACI'));
