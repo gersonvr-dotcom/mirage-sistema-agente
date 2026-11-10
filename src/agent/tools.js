@@ -64,7 +64,7 @@ export const TOOL_DEFINITIONS = [
   },
   {
     name: 'consultar_cliente',
-    description: 'Busca las OPs abiertas de un cliente por nombre (coincidencia parcial).',
+    description: 'Busca las OPs abiertas de un cliente por nombre (coincidencia parcial). No devuelve datos de contacto (persona, correo, teléfono): el sistema aún no tiene un CRM conectado.',
     parametersJsonSchema: {
       type: 'object',
       properties: {
@@ -231,7 +231,7 @@ export const TOOL_DEFINITIONS = [
   },
   {
     name: 'validar_pi_vs_op',
-    description: 'SOLO ADMINISTRADORES. Valida las proformas (PI) de una OP contra las líneas de esa OP, con reglas de código (no a ojo): suma las líneas de cada lado por color + formato + acabado, suma todas las PIs de la OP (pueden ser parciales) y devuelve estado global (coincide | parcial | con_diferencias | no_concluyente), un resumen y la lista de grupos con su estado (ok, diferencia_menor, parcial = la PI cubre solo parte de lo pedido, diferencia, solo_en_pi, solo_en_op, revisar_acabado). Úsala para "¿la PI de la OP X coincide con la OP?" o para validar un embarque. Puede tardar si hay que leer las PDFs; si responde "procesando", pide repetir en un minuto.',
+    description: 'SOLO ADMINISTRADORES. Valida las proformas (PI) de una OP contra las líneas de esa OP, con reglas de código (no a ojo): suma las líneas de cada lado por color + formato + acabado y compara solo las líneas de la fábrica que emite la PI. Cuenta una sola vez las PIs duplicadas ("(1)", "(2)"), suma las PIs parciales de la OP y NO suma las complementarias (reposición, reserva, adicional, sufijo -A/-E: son pedidos aparte; las lista en advertencias). Devuelve estado global (coincide | parcial | con_diferencias | no_concluyente), un resumen y los grupos con su estado (ok, diferencia_menor, parcial = la PI cubre solo parte de lo pedido, diferencia, solo_en_pi, solo_en_op, revisar_acabado). Hoy solo sabe leer PIs de MIRAGE; las de otras fábricas dan no_concluyente. Úsala para "¿la PI de la OP X coincide con la OP?" o para validar un embarque. Puede tardar si hay que leer los PDF; si responde "procesando", pide repetir en un minuto.',
     parametersJsonSchema: {
       type: 'object',
       properties: {
