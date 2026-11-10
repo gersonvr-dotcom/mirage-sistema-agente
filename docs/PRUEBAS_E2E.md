@@ -61,7 +61,7 @@ Antes de empezar en producción: seguir [DESPLIEGUE.md](DESPLIEGUE.md) (migracio
 
 - **Pregunta:** «¿Cuántos proyectos tiene Van der Laat y Jiménez?» y «¿cuántas OPs tiene el proyecto ALESTE 137?»
 - **Esperado:** ALESTE 137 aparece como **un** proyecto con todas sus OPs.
-- **Estado local:** FALLA por datos (el agente cuenta bien lo que hay). Hay 3 proyectos:
+- **Estado local:** OK tras fusionar los datos (2026-11-10). Antes fallaba por datos (el agente contaba bien lo que había): 3 proyectos:
 
   | id | proyecto | cliente |
   |---|---|---|
@@ -69,11 +69,13 @@ Antes de empezar en producción: seguir [DESPLIEGUE.md](DESPLIEGUE.md) (migracio
   | 211 | LADRILLO ALESTE 137 | 80 VAN DER LAAT Y JIMENEZ |
   | 93 | ALESTE 137 VITACER | 75 VAN DE LAT Y JIMENEZ (duplicado con error de tipeo) |
 
-- **Arreglo (datos, no código):** en Configuración → Clientes fusionar 75 en 80; luego en Normalizar proyectos fusionar 211 y 93 en 184. Hacerlo en local y repetirlo en producción (las IDs pueden diferir: buscar por nombre).
+- **Arreglo (datos, no código):** mover lo del cliente 75 al 80 y fusionar los proyectos 211 y 93 en el 184 (Normalizar proyectos). No hay pantalla para fusionar clientes: en local se hizo con un script puntual. En producción las IDs pueden diferir: buscar por nombre.
+- **Riesgo — el sync lo puede deshacer:** el sync crea el cliente por nombre exacto del Excel Madre. La OP 2026-105 trae "VAN DE LAT Y JIMENEZ" en el Excel, así que la próxima sincronización recrearía ese cliente y volvería a colgar esa OP de él. La corrección definitiva es **corregir el nombre del cliente en el Excel Madre** (fila de la OP 2026-105), o agregar alias de clientes (tarea nueva).
+- **Resultado local tras fusionar:** "¿Cuántos proyectos tiene Van der Laat y Jiménez?" → 1 proyecto (ALESTE 137, 7 OPs). "¿Cuántas OPs tiene ALESTE 137 y de qué tipo?" → 7, agrupadas en principal, perfiles y adicional.
 
 | Rol | Local (2026-11-09) | Producción |
 |---|---|---|
-| Administrador | FALLA — 3 proyectos (datos sin fusionar) | |
+| Administrador | OK (2026-11-10) — 1 proyecto, 7 OPs, tras fusionar datos | |
 | Operador | | |
 
 ## Condiciones transversales
