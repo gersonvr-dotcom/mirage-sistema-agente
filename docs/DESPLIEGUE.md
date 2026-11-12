@@ -42,7 +42,7 @@ Requeridas (si falta alguna, el servidor o la función correspondiente falla):
 | `DB_HOST`, `DB_PORT`, `DB_USER`, `DB_PASSWORD`, `DB_NAME` | base de datos |
 | `AGENT_PROVIDER` (`gemini` o `claude`), `AGENT_TOKEN_LIMIT` | agente y su límite de uso |
 | `GEMINI_API_KEY`, `GEMINI_MODEL` / `ANTHROPIC_API_KEY`, `ANTHROPIC_MODEL`, `ANTHROPIC_MAX_TOKENS` | según el proveedor elegido |
-| `SHAREPOINT_TENANT_ID`, `SHAREPOINT_CLIENT_ID`, `SHAREPOINT_CLIENT_SECRET`, `SHAREPOINT_SHARE_URL`, `SHAREPOINT_OPS_FOLDER_URL` | lectura de SharePoint (Excel Madre, carpetas de OP, PIs) |
+| `SHAREPOINT_TENANT_ID`, `SHAREPOINT_CLIENT_ID`, `SHAREPOINT_CLIENT_SECRET`, `SHAREPOINT_SHARE_URL`, `SHAREPOINT_OPS_FOLDER_URL` | lectura de SharePoint (Excel Madre, carpetas de OP, PIs); permisos de la app y verificador en [PERMISOS_AZURE.md](PERMISOS_AZURE.md) |
 
 Opcionales (tienen valor por defecto):
 
