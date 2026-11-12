@@ -69,8 +69,8 @@ Antes de empezar en producción: seguir [DESPLIEGUE.md](DESPLIEGUE.md) (migracio
   | 211 | LADRILLO ALESTE 137 | 80 VAN DER LAAT Y JIMENEZ |
   | 93 | ALESTE 137 VITACER | 75 VAN DE LAT Y JIMENEZ (duplicado con error de tipeo) |
 
-- **Arreglo (datos, no código):** mover lo del cliente 75 al 80 y fusionar los proyectos 211 y 93 en el 184 (Normalizar proyectos). No hay pantalla para fusionar clientes: en local se hizo con un script puntual. En producción las IDs pueden diferir: buscar por nombre.
-- **Riesgo — el sync lo puede deshacer:** el sync crea el cliente por nombre exacto del Excel Madre. La OP 2026-105 trae "VAN DE LAT Y JIMENEZ" en el Excel, así que la próxima sincronización recrearía ese cliente y volvería a colgar esa OP de él. La corrección definitiva es **corregir el nombre del cliente en el Excel Madre** (fila de la OP 2026-105), o agregar alias de clientes (tarea nueva).
+- **Arreglo en producción (R5-10):** correr `db/migration_cliente_alias.sql` antes de reiniciar; luego, en Configuración → Normalizar clientes, buscar "VAN DE LAT Y JIMENEZ", dejar como cliente que se queda "VAN DER LAAT Y JIMENEZ", ver qué cambiaría y fusionar; después, en Normalizar proyectos, juntar a mano las variantes de ALESTE 137 (por ejemplo "ALESTE 137 VITACER": el sistema no reconoce VITACER como sufijo, así que no lo sugiere solo). Las IDs pueden diferir: buscar por nombre.
+- **El sync ya no lo deshace:** el nombre del cliente fusionado se guarda como alias (`cliente_alias`) y el sync lo consulta antes de crear clientes. Verificado en local el 2026-11-12 con el sync real: el sync reprodujo el duplicado antes de fusionar; tras fusionar desde la pantalla, un segundo sync dio `clientes_creados: 0` y la OP 2026-105 siguió con ALESTE 137.
 - **Resultado local tras fusionar:** "¿Cuántos proyectos tiene Van der Laat y Jiménez?" → 1 proyecto (ALESTE 137, 7 OPs). "¿Cuántas OPs tiene ALESTE 137 y de qué tipo?" → 7, agrupadas en principal, perfiles y adicional.
 
 | Rol | Local (2026-11-09) | Producción |

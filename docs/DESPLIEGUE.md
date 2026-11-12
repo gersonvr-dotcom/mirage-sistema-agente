@@ -28,6 +28,7 @@ Copia esta lista en cada entrega y marca cada paso.
    | 9 | `migration_ops_fabrica.sql` | `ops.fabrica` |
    | 10 | `migration_proveedores_progress.sql` | unifica PROGRESS en PROGRESS PROFILE (**ajusta datos**) |
    | 11 | `migration_documentos_manuales.sql` | carga manual de PIs (`documentos_op.origen`, `documentos_op_archivos`) |
+   | 12 | `migration_cliente_alias.sql` | alias de clientes fusionados (`cliente_alias`) |
 
 3. [ ] Volver a correr `db/verificar_migraciones.sql`: todas las filas en `1`.
 4. Escribir siempre desde phpMyAdmin o con `utf8mb4` (un `mysql -e` crudo corrompe tildes y ñ).

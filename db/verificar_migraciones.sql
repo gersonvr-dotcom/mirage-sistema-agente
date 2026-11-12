@@ -69,4 +69,6 @@ UNION ALL
   SELECT 30 AS orden, 'migration_documentos_manuales.sql' AS migracion, 'documentos_op.origen' AS objeto, (SELECT COUNT(*) > 0 FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'documentos_op' AND COLUMN_NAME = 'origen') AS aplicado
 UNION ALL
   SELECT 31 AS orden, 'migration_documentos_manuales.sql' AS migracion, 'tabla documentos_op_archivos' AS objeto, (SELECT COUNT(*) > 0 FROM information_schema.TABLES WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'documentos_op_archivos') AS aplicado
+UNION ALL
+  SELECT 32 AS orden, 'migration_cliente_alias.sql' AS migracion, 'tabla cliente_alias' AS objeto, (SELECT COUNT(*) > 0 FROM information_schema.TABLES WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'cliente_alias') AS aplicado
 ) v ORDER BY orden;

@@ -15,6 +15,17 @@ CREATE TABLE clientes (
   created_at    TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
+-- Memoria de fusiones de clientes: el nombre de un cliente absorbido (en clave normalizada) apunta al cliente que
+-- quedó. El sync con el Excel Madre la consulta antes de crear un cliente, para que un nombre mal escrito no lo recree.
+CREATE TABLE cliente_alias (
+  id                 INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  alias_normalizado  VARCHAR(190) NOT NULL,
+  cliente_id         INT UNSIGNED NOT NULL,
+  created_at         TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE KEY uq_cliente_alias (alias_normalizado),
+  FOREIGN KEY (cliente_id) REFERENCES clientes(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
 CREATE TABLE usuarios (
   id            INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
   email         VARCHAR(150) NOT NULL UNIQUE,

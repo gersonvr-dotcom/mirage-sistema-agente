@@ -40,6 +40,8 @@ export const api = {
   actualizarCliente: (id, data) =>
     request(`/clientes/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
   eliminarCliente: (id) => request(`/clientes/${id}`, { method: 'DELETE' }),
+  candidatosFusionClientes: () => request('/clientes/candidatos-fusion'),
+  fusionarClientes: (data) => request('/clientes/fusionar', { method: 'POST', body: JSON.stringify(data) }),
 
   usuarios: () => request('/usuarios'),
   crearUsuario: (data) => request('/usuarios', { method: 'POST', body: JSON.stringify(data) }),

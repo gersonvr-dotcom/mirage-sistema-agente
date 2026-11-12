@@ -1,6 +1,7 @@
 import { pool } from '../db/pool.js';
 import { obtenerFilasComerciales } from './sharepoint.js';
 import { normalizarProyecto, claveTexto } from './proyectoNormalizer.js';
+import { resolverCliente } from './clientesFusion.js';
 
 const FECHA_RE = /^\d{4}-\d{2}-\d{2}$/;
 
@@ -122,14 +123,10 @@ export async function sincronizarDesdeExcelMadre() {
       try {
         let clienteId = clienteCache.get(r.cliente);
         if (!clienteId) {
-          const [existentes] = await conn.query('SELECT id FROM clientes WHERE nombre = ?', [r.cliente]);
-          if (existentes.length) {
-            clienteId = existentes[0].id;
-          } else {
-            const [res] = await conn.query('INSERT INTO clientes (nombre) VALUES (?)', [r.cliente]);
-            clienteId = res.insertId;
-            stats.clientes_creados++;
-          }
+          // Por nombre y, si no existe, por alias de una fusión de clientes (R5-10); solo si no hay ninguno se crea.
+          const resuelto = await resolverCliente(conn, r.cliente);
+          clienteId = resuelto.id;
+          if (resuelto.creado) stats.clientes_creados++;
           clienteCache.set(r.cliente, clienteId);
         }
 

@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { api } from '../api';
 import { useJob } from '../hooks/useJob';
 import { NormalizarProyectos } from '../components/NormalizarProyectos';
+import { NormalizarClientes } from '../components/NormalizarClientes';
 
 export function Configuracion() {
   const [sincronizandoExcel, setSincronizandoExcel] = useState(false);
@@ -371,6 +372,14 @@ export function Configuracion() {
           )}
         </>
       )}
+
+      <h2 style={{ marginTop: 32 }}>Normalizar clientes (nombres duplicados)</h2>
+      <p className="chat-empty">
+        Un mismo cliente puede haber quedado registrado con dos nombres (por ejemplo "VAN DER LAAT Y JIMENEZ" y "VAN DE LAT Y
+        JIMENEZ"), lo que parte sus obras y sus rankings. Aquí se revisan y se fusionan: el nombre del duplicado se recuerda, así que
+        la sincronización con el Excel Madre ya no lo recrea. Hacelo antes de normalizar proyectos.
+      </p>
+      <NormalizarClientes />
 
       <h2 style={{ marginTop: 32 }}>Normalizar proyectos (obras duplicadas)</h2>
       <p className="chat-empty">

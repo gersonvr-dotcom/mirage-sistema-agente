@@ -5,9 +5,11 @@ import {
   crearCliente,
   actualizarCliente,
   eliminarCliente,
+  registrarAccionAgente,
 } from '../db/queries.js';
 import { requireRole } from '../middleware/requireRole.js';
 import { TIPOS_CLIENTE } from '../db/clienteTipos.js';
+import { candidatosFusionClientes, fusionarClientes } from '../services/clientesFusion.js';
 
 export const clientesRouter = Router();
 
@@ -22,6 +24,44 @@ clientesRouter.get('/', async (req, res) => {
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'No se pudo listar los clientes.', detail: err.message });
+  }
+});
+
+// Las rutas fijas van antes de '/:id' para que no se interpreten como un id.
+clientesRouter.get('/candidatos-fusion', requireRole('administrador'), async (req, res) => {
+  try {
+    res.json(await candidatosFusionClientes());
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'No se pudo analizar los clientes.', detail: err.message });
+  }
+});
+
+clientesRouter.post('/fusionar', requireRole('administrador'), async (req, res) => {
+  const { matriz_id, cliente_ids, dry_run } = req.body ?? {};
+  if (!matriz_id || !Array.isArray(cliente_ids) || cliente_ids.length === 0) {
+    return res.status(400).json({ error: 'Faltan "matriz_id" y/o "cliente_ids" (lista) en el body.' });
+  }
+  try {
+    const resultado = await fusionarClientes({ matrizId: matriz_id, clienteIds: cliente_ids, dryRun: Boolean(dry_run) });
+    if (!resultado.dry_run) {
+      // La fusión ya está confirmada: un fallo al registrar la auditoría no debe presentarse como error de la fusión.
+      try {
+        await registrarAccionAgente({
+          usuarioId: req.user.sub,
+          toolName: 'fusionar_clientes',
+          input: { matriz_id, cliente_ids },
+          resultado,
+        });
+      } catch (errAuditoria) {
+        console.error('No se pudo registrar la auditoría de la fusión:', errAuditoria.message);
+      }
+    }
+    res.json(resultado);
+  } catch (err) {
+    if (err.code === 'FUSION_INVALIDA') return res.status(400).json({ error: err.message });
+    console.error(err);
+    res.status(500).json({ error: 'No se pudo fusionar los clientes.', detail: err.message });
   }
 });
 

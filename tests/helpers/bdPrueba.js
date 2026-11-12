@@ -1,7 +1,7 @@
 import fs from 'node:fs';
 import mysql from 'mysql2/promise';
 
-// BD desechable para pruebas que necesitan MariaDB: se crea `test_<DB_NAME>` desde db/schema.sql y se borra y recrea en
+// BD desechable para pruebas que necesitan MariaDB: se crea `test_<DB_NAME>_<pid>` desde db/schema.sql y se borra y recrea en
 // cada corrida, así nunca toca los datos de desarrollo. Corre con `npm run test:db` (carga .env); sin credenciales en el
 // entorno (como en `npm test`) las pruebas que la usan se saltan.
 export const hayBD = Boolean(process.env.DB_HOST && process.env.DB_USER && process.env.DB_NAME);
@@ -18,7 +18,8 @@ const conexion = (database) =>
 
 /** Recrea la BD de prueba con el esquema actual y apunta DB_NAME hacia ella ANTES de importar src/db/pool.js. */
 export async function prepararBDPrueba(fixturesSql) {
-  const nombre = `test_${process.env.DB_NAME}`;
+  // Un nombre por proceso: node --test corre cada archivo en su propio proceso y en paralelo, y no deben pisarse la BD.
+  const nombre = `test_${process.env.DB_NAME}_${process.pid}`;
   if (!/^test_[A-Za-z0-9_]+$/.test(nombre)) throw new Error(`Nombre de BD de prueba no seguro: ${nombre}`);
   const admin = await conexion(undefined);
   try {
