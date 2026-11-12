@@ -8,6 +8,19 @@ se registra como tarea nueva en el roadmap, no se arregla "de pasada".
 
 Antes de empezar en producción: seguir [DESPLIEGUE.md](DESPLIEGUE.md) (migraciones, sync, PIs extraídas).
 
+## Corrida local del 2026-11-12 (código al día, datos tras el sync real)
+
+| Caso | Administrador | Operador |
+|---|---|---|
+| 1. Precios Constructora Izquierdo | OK — 1 llamada; 3 cotizaciones con subtotal, descuento y total | OK — sin permiso para ver precios |
+| 2. PI vs OP 2026-001 | OK — 1 llamada; "coincide", tabla por línea | OK — sin permiso (las PIs son de administrador) |
+| 3. Contacto RM Arquitectura | PARCIAL — dice que no hay CRM conectado y ofrece OPs/proyectos (2 búsquedas) | PARCIAL — igual (1 búsqueda) |
+| 4. Constructora con más m² en 2026 | PARCIAL — avisa que los clientes no tienen tipo y da el ranking general con criterio (EVCO 22.291 m²) | PARCIAL — igual |
+| 5. ALESTE 137 = 1 proyecto | OK tras fusionar los datos — Van der Laat y Jiménez: 2 obras (ALESTE 137 con 8 OPs y BLVD 201) | no se repitió tras la fusión final (antes de ella contaba las variantes de ALESTE 137 como obras aparte) |
+
+Los casos 3 y 4 no pasan del todo por dependencias, no por el agente: el 3 espera el CRM (R3/D-04) y el 4 espera cargar
+`clientes.tipo` (R4-01: `scripts/tipos_clientes.mjs`). Ningún flujo pasó de 2 llamadas a herramientas.
+
 ## Caso 1 — Precios cotizados a Constructora Izquierdo
 
 - **Pregunta:** «¿Qué precios le hemos cotizado a Constructora Izquierdo?»
@@ -71,7 +84,8 @@ Antes de empezar en producción: seguir [DESPLIEGUE.md](DESPLIEGUE.md) (migracio
 
 - **Arreglo en producción (R5-10):** correr `db/migration_cliente_alias.sql` antes de reiniciar; luego, en Configuración → Normalizar clientes, buscar "VAN DE LAT Y JIMENEZ", dejar como cliente que se queda "VAN DER LAAT Y JIMENEZ", ver qué cambiaría y fusionar; después, en Normalizar proyectos, juntar a mano las variantes de ALESTE 137 (por ejemplo "ALESTE 137 VITACER": el sistema no reconoce VITACER como sufijo, así que no lo sugiere solo). Las IDs pueden diferir: buscar por nombre.
 - **El sync ya no lo deshace:** el nombre del cliente fusionado se guarda como alias (`cliente_alias`) y el sync lo consulta antes de crear clientes. Verificado en local el 2026-11-12 con el sync real: el sync reprodujo el duplicado antes de fusionar; tras fusionar desde la pantalla, un segundo sync dio `clientes_creados: 0` y la OP 2026-105 siguió con ALESTE 137.
-- **Resultado local tras fusionar:** "¿Cuántos proyectos tiene Van der Laat y Jiménez?" → 1 proyecto (ALESTE 137, 7 OPs). "¿Cuántas OPs tiene ALESTE 137 y de qué tipo?" → 7, agrupadas en principal, perfiles y adicional.
+- **Resultado local tras fusionar (2026-11-12):** el sync real trajo variantes nuevas ("ALESTE 137 VITACER", "ALESTE 137 GRIGLIAS", una OP nueva) y se juntaron con "Normalizar proyectos". Un tercer sync no creó ni reasignó nada y el agente responde: 2 proyectos (ALESTE 137 con 8 OPs y BLVD 201).
+- **Orden que funciona en producción:** primero clientes (para que el alias exista), luego proyectos; si se juntan los proyectos antes, el sync puede recrear la variante bajo el cliente duplicado.
 
 | Rol | Local (2026-11-09) | Producción |
 |---|---|---|
