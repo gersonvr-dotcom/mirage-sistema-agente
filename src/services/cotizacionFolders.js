@@ -3,8 +3,9 @@ import { obtenerAccessToken, graphGet, graphDescargarContenido } from './sharepo
 import { celdaTexto, celdaNumero } from './opFolders.js';
 import { claveTexto } from './proyectoNormalizer.js';
 
-const ARCHIVO_COTIZACION_RE = /^\d{4}-\d+-[A-Z]+.*\.xlsx$/i;
-const NUMERO_EN_NOMBRE_RE = /^(\d{4}-\d+-[A-Z]+)/i;
+// Acepta un espacio tras el guion del vendedor ("2026-343- AA-CLIENTE.xlsx"), que se ve en archivos reales.
+export const ARCHIVO_COTIZACION_RE = /^\d{4}-\d+-\s*[A-Z]+.*\.xlsx$/i;
+const NUMERO_EN_NOMBRE_RE = /^(\d{4}-\d+-\s*[A-Z]+)/i;
 const MAX_COLUMNAS = 30;
 const FILAS_BUSQUEDA_VALOR = 3; // filas bajo una etiqueta (MONEDA, ANTICIPO) donde se busca su valor
 
@@ -172,7 +173,7 @@ export function extraerCotizacion(ws, nombreArchivo = '') {
       }
     }
   }
-  if (!numeroCotizacion) numeroCotizacion = nombreArchivo.match(NUMERO_EN_NOMBRE_RE)?.[1]?.toUpperCase() ?? null;
+  if (!numeroCotizacion) numeroCotizacion = nombreArchivo.match(NUMERO_EN_NOMBRE_RE)?.[1]?.replace(/\s+/g, '').toUpperCase() ?? null;
 
   if (lineas.length === 0) advertencias.push('La cotización no tiene líneas con precio.');
   if (pie.granTotal !== null && Math.abs(pie.granTotal - sumaLineas) > 0.011) {

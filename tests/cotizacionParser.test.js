@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import ExcelJS from 'exceljs';
-import { extraerCotizacion } from '../src/services/cotizacionFolders.js';
+import { extraerCotizacion, ARCHIVO_COTIZACION_RE } from '../src/services/cotizacionFolders.js';
 
 // Hojas sintéticas (sin datos de clientes) que reproducen las variantes observadas en cotizaciones reales.
 function hoja(filas) {
@@ -96,6 +96,19 @@ test('moneda y anticipo con una fila vacía entre la etiqueta y el valor (cotiza
   assert.equal(c.moneda, 'USD');
   assert.equal(c.anticipoPct, 50);
   assert.ok(!c.advertencias.some((a) => a.includes('moneda')));
+});
+
+test('nombre de archivo con espacio tras el guion del vendedor se reconoce y da el número sin espacio', () => {
+  assert.ok(ARCHIVO_COTIZACION_RE.test('2099-343- AA-CLIENTE-OBRA ADICIONAL .xlsx'));
+  assert.ok(ARCHIVO_COTIZACION_RE.test('2099-001-XX-CLIENTE-OBRA.xlsx'));
+  assert.ok(!ARCHIVO_COTIZACION_RE.test('OP-2099-001.xlsx'));
+  assert.ok(!ARCHIVO_COTIZACION_RE.test('Boleta de entrega OP 2099-001.xlsx'));
+  const ws = hoja({
+    ...fila(16, ENC_ESTANDAR),
+    ...fila(17, { A: 1, D: 'SERIEX', E: 'SX01', H: 1, K: 'M2', O: 1, P: 10, Q: 10 }),
+    ...fila(18, { P: 'GRAN TOTAL', Q: 10 }),
+  });
+  assert.equal(extraerCotizacion(ws, '2099-343- AA-CLIENTE-OBRA.xlsx').numeroCotizacion, '2099-343-AA');
 });
 
 test('advierte si el GRAN TOTAL no coincide con la suma de las líneas o falta la moneda', () => {
