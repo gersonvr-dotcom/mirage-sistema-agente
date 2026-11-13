@@ -51,6 +51,7 @@ Opcionales (tienen valor por defecto):
 | `EXTRACTOR_PROVIDER` | el de `AGENT_PROVIDER` | quién lee los PDF de PIs |
 | `GEMINI_EXTRACTOR_MODEL` / `ANTHROPIC_EXTRACTOR_MODEL` | el modelo del agente | modelo de lectura de PIs |
 | `EXTRACCION_ESPERA_MS` | 25000 | cuánto espera el agente una lectura de PI antes de decir "procesando" (menor que el timeout del proxy) |
+| `CRON_TOKEN` | (sin definir: la sincronización diaria por token queda desactivada) | clave larga (mínimo 24 caracteres) que la tarea programada de Plesk envía en el encabezado `X-Cron-Token` (ver §4b). Generar una aleatoria, por ejemplo `openssl rand -hex 32` |
 
 - [ ] Variables nuevas de la entrega cargadas y guardadas. Nunca se pegan claves en chats ni en el repo.
 - La lectura de PIs gasta cuota de la API del modelo, pero **no** cuenta contra `AGENT_TOKEN_LIMIT` (se registra en `meta.usage` de cada documento).
@@ -72,6 +73,33 @@ así que **no** hay que quedarse esperando una sola petición. En este orden, es
 
 Antes de dar por buenas las métricas, comprobar que la cantidad de OPs de la BD coincide con las carpetas de SharePoint
 (ahí hay más carpetas que OPs si el Excel Madre aún no las trae: eso es esperable).
+
+## 4b. Sincronización automática diaria (7:00 a. m.)
+Las cuatro sincronizaciones del §4 se pueden correr juntas, en ese orden, con un solo llamado. Plesk lo hace cada
+mañana con una tarea programada; el administrador también puede lanzarlo desde Configuración → **Ejecutar todo ahora**.
+No usa el modelo de IA (no gasta cuota de la API). Un paso que falla no detiene los siguientes.
+
+1. [ ] Plesk → Node.js → Variables de entorno: agregar `CRON_TOKEN` con una clave larga y aleatoria (mínimo 24 caracteres).
+       Guardar y **Restart App**. Sin esta variable el acceso por token queda desactivado (responde 401).
+2. [ ] Plesk → Tareas programadas (Scheduled Tasks) → Agregar tarea, tipo **Ejecutar un comando**, y programarla todos los días:
+       ```
+       curl -fsS -X POST -H "X-Cron-Token: LA_CLAVE_DE_CRON_TOKEN" https://mirage.gixacr.com/api/config/sincronizar-todo
+       ```
+       La respuesta es `202` con el estado: el trabajo sigue en segundo plano en la app (por eso no choca con el 504 del proxy).
+3. [ ] **Hora:** el servidor suele estar en UTC. 7:00 a. m. de Costa Rica (UTC-6, sin horario de verano) = **13:00 UTC**.
+       Confirmar la zona horaria del servidor en Plesk antes de fijar la hora. Elegir una hora en que nadie esté sincronizando a mano.
+4. [ ] Probar una vez a mano con el mismo comando y mirar Configuración → *Sincronización automática diaria*: debe mostrar
+       "Última ejecución … (automática)" con los cuatro pasos.
+
+Notas:
+- El estado de la última ejecución vive en memoria: un **Restart App** lo borra (la pantalla dirá "Sin ejecuciones desde el último
+  reinicio"). El resultado de cada paso también queda en el log de la app (líneas `[sincronización completa]`).
+- Si una ejecución ya está en curso, un segundo llamado no lanza otra; devuelve el estado actual.
+- Si la app se reinicia a mitad de una ejecución (por ejemplo, un despliegue), se corta; la del día siguiente la repone.
+- La clave viaja en el comando de la tarea: no pegarla en chats ni en el repositorio. Para rotarla, cambiar `CRON_TOKEN`,
+  reiniciar la app y actualizar el comando de la tarea.
+- Lo que revisa el sync del Excel Madre (clientes y proyectos con nombres nuevos) sigue siendo trabajo de las pantallas
+  *Normalizar clientes* y *Normalizar proyectos*: un nombre duplicado nuevo aparece cada mañana sin aviso hasta que se revise.
 
 ## 5. Verificación con una consulta real
 - [ ] Como **administrador**, en el chat: «¿Qué constructora compró más m² en 2026?» → responde con el criterio (solo M2, sin

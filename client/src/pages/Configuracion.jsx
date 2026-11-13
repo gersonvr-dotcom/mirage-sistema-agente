@@ -3,6 +3,7 @@ import { api } from '../api';
 import { useJob } from '../hooks/useJob';
 import { NormalizarProyectos } from '../components/NormalizarProyectos';
 import { NormalizarClientes } from '../components/NormalizarClientes';
+import { SincronizacionDiaria } from '../components/SincronizacionDiaria';
 
 export function Configuracion() {
   const [sincronizandoExcel, setSincronizandoExcel] = useState(false);
@@ -33,7 +34,9 @@ export function Configuracion() {
     <div className="page">
       <h1>Configuración</h1>
 
-      <h2>Sincronización con Excel Madre 2026</h2>
+      <SincronizacionDiaria />
+
+      <h2 style={{ marginTop: 32 }}>Sincronización con Excel Madre 2026</h2>
       <p className="chat-empty">
         Trae en vivo el Excel Madre 2026 desde SharePoint y actualiza clientes, proyectos,
         cotizaciones y OPs en la base de datos: crea lo que falte y actualiza (por número de

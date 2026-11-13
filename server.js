@@ -15,6 +15,8 @@ import { productosRouter } from './src/routes/productos.js';
 import { proveedoresRouter } from './src/routes/proveedores.js';
 import { configRouter } from './src/routes/config.js';
 import { analiticaRouter } from './src/routes/analitica.js';
+import { sincronizacionCompletaRouter } from './src/routes/sincronizacionCompleta.js';
+import { accesoAdminOToken } from './src/middleware/accesoAdminOToken.js';
 import { requireAuth } from './src/middleware/requireAuth.js';
 import { requireRole } from './src/middleware/requireRole.js';
 
@@ -39,6 +41,8 @@ app.use('/api/analitica', requireAuth, analiticaRouter);
 app.use('/api/ops', requireAuth, opsRouter);
 app.use('/api/productos', requireAuth, productosRouter);
 app.use('/api/proveedores', requireAuth, proveedoresRouter);
+// Antes del guardián general de /api/config: esta ruta también acepta el token de la tarea programada (CRON_TOKEN).
+app.use('/api/config/sincronizar-todo', accesoAdminOToken, sincronizacionCompletaRouter);
 app.use('/api/config', requireAuth, requireRole('administrador'), configRouter);
 
 if (fs.existsSync(path.join(clientDist, 'index.html'))) {

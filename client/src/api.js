@@ -92,6 +92,8 @@ export const api = {
     request(`/ops/items/${itemId}/etapas`, { method: 'POST', body: JSON.stringify(data) }),
 
   sincronizarExcelMadre: () => request('/config/sincronizar-excel', { method: 'POST' }),
+  sincronizarTodo: () => request('/config/sincronizar-todo', { method: 'POST' }),
+  estadoSincronizarTodo: () => request('/config/sincronizar-todo/estado'),
   sincronizarProductosOps: () => request('/config/sincronizar-productos', { method: 'POST' }),
   estadoSincronizacionProductos: () => request('/config/sincronizar-productos/estado'),
   documentosOP: (id) => request(`/ops/${id}/documentos`),
