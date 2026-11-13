@@ -6,6 +6,7 @@ import { claveTexto } from './proyectoNormalizer.js';
 const ARCHIVO_COTIZACION_RE = /^\d{4}-\d+-[A-Z]+.*\.xlsx$/i;
 const NUMERO_EN_NOMBRE_RE = /^(\d{4}-\d+-[A-Z]+)/i;
 const MAX_COLUMNAS = 30;
+const FILAS_BUSQUEDA_VALOR = 3; // filas bajo una etiqueta (MONEDA, ANTICIPO) donde se busca su valor
 
 // Posiciones de respaldo (plantilla estándar) si no se encuentra el nombre de la columna en el encabezado.
 const COLUMNAS_POR_DEFECTO = { area: 2, fabrica: 3, linea: 4, codigo: 5, acabado: 6, formato: 7, cantidad: 8, unidad: 11, cantidadFinal: 15 };
@@ -51,6 +52,15 @@ export function extraerCotizacion(ws, nombreArchivo = '') {
   const val = (r, c) => ws.getRow(r).getCell(c).value;
   const texto = (r, c) => celdaTexto(val(r, c));
   const num = (r, c) => celdaNumero(val(r, c));
+  // El valor de una etiqueta ("MONEDA", "ANTICIPO") está en la celda de abajo; en algunas plantillas hay una fila vacía
+  // en medio (la etiqueta en la fila 33 y el valor en la 35), así que se toma el primer valor en las filas siguientes.
+  const debajo = (r, c, leer) => {
+    for (let f = r + 1; f <= r + FILAS_BUSQUEDA_VALOR; f++) {
+      const v = leer(f, c);
+      if (v !== null && v !== undefined) return v;
+    }
+    return null;
+  };
 
   let hdr = null;
   let precioCol = null;
@@ -140,10 +150,10 @@ export function extraerCotizacion(ws, nombreArchivo = '') {
     for (let c = 1; c <= MAX_COLUMNAS; c++) {
       const t = norm(val(r, c));
       if (t === 'MONEDA' && moneda === null) {
-        monedaTexto = texto(r + 1, c);
+        monedaTexto = debajo(r, c, texto);
         moneda = aMoneda(monedaTexto);
       } else if (t === 'ANTICIPO' && anticipoPct === null) {
-        const a = num(r + 1, c);
+        const a = debajo(r, c, num);
         if (a !== null) anticipoPct = a <= 1 ? a * 100 : a;
       }
     }

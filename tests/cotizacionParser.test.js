@@ -84,6 +84,20 @@ test('variante PRECIO MO: salta filas de sección y de plantilla vacía; ítems 
   assert.equal(c.pie.granTotal, 2272);
 });
 
+test('moneda y anticipo con una fila vacía entre la etiqueta y el valor (cotización 2026-235-AA)', () => {
+  const ws = hoja({
+    ...fila(16, ENC_ESTANDAR),
+    ...fila(17, { A: 1, D: 'SERIEX', E: 'SX01', H: 1, K: 'M2', O: 1, P: 10, Q: 10 }),
+    ...fila(18, { P: 'GRAN TOTAL', Q: 10 }),
+    ...fila(33, { D: ' MONEDA', E: 'ANTICIPO' }),
+    ...fila(35, { D: 'DOLARES', E: 0.5 }),
+  });
+  const c = extraerCotizacion(ws, '2099-005-AA-X.xlsx');
+  assert.equal(c.moneda, 'USD');
+  assert.equal(c.anticipoPct, 50);
+  assert.ok(!c.advertencias.some((a) => a.includes('moneda')));
+});
+
 test('advierte si el GRAN TOTAL no coincide con la suma de las líneas o falta la moneda', () => {
   const ws = hoja({
     ...fila(16, ENC_ESTANDAR),
