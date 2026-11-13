@@ -91,6 +91,21 @@ No usa el modelo de IA (no gasta cuota de la API). Un paso que falla no detiene 
 4. [ ] Probar una vez a mano con el mismo comando y mirar Configuración → *Sincronización automática diaria*: debe mostrar
        "Última ejecución … (automática)" con los cuatro pasos.
 
+Si la tarea con `curl` falla con `curl: (77) error setting certificate verify locations` (el shell de la tarea no ve el archivo de
+certificados) y el plan no permite cambiar el acceso SSH (Hosting y DNS → Acceso al alojamiento web → "Prohibido"), usar el script
+PHP del repositorio en vez del comando:
+1. [ ] En Plesk → Archivos, crear en la carpeta que **contiene** `httpdocs` (nunca dentro de `httpdocs`, ni dentro de la carpeta del
+       repositorio, para que un `git pull` no la pise) un archivo, por ejemplo `mirage_sincronizar.php`, con el contenido de
+       `scripts/plesk_sincronizar.php`, y reemplazar `PEGA_AQUI_LA_CLAVE` por la clave de `CRON_TOKEN`. Esa copia con la clave no se sube al repo.
+2. [ ] Tareas programadas → editar la tarea: tipo **Ejecutar un script PHP**, elegir ese archivo, versión de PHP 7.4 (la instalada),
+       diaria a la hora del paso 3. Sin argumentos.
+3. [ ] **Ejecutar ahora**: la salida debe ser `HTTP 202 - estado: corriendo`. Un `HTTP 401` es la clave distinta a la de `CRON_TOKEN`;
+       "ERROR de conexion" indica el problema de certificados (el mensaje dice qué archivo de CAs usó).
+La verificación del certificado queda siempre activa; no usar `curl -k`.
+El script ignora las peticiones web (responde 404 sin hacer nada), pero si Plesk solo permite crearlo dentro de la carpeta pública del
+sitio, comprobar abriendo su URL en el navegador que muestra 404 o la pantalla de Mirage, nunca su código ni "Falta poner la clave".
+Mejor colocarlo un nivel por encima de la carpeta pública si el panel lo permite.
+
 Notas:
 - El estado de la última ejecución vive en memoria: un **Restart App** lo borra (la pantalla dirá "Sin ejecuciones desde el último
   reinicio"). El resultado de cada paso también queda en el log de la app (líneas `[sincronización completa]`).
